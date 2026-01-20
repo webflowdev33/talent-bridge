@@ -18,13 +18,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Table,
   TableBody,
   TableCell,
@@ -36,14 +29,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2, Calendar, Clock, Users, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
-interface Job {
-  id: string;
-  title: string;
-}
-
 interface Slot {
   id: string;
-  job_id: string;
+  job_id: string | null;
   slot_date: string;
   start_time: string;
   end_time: string;
@@ -51,11 +39,9 @@ interface Slot {
   current_capacity: number | null;
   is_enabled: boolean | null;
   created_at: string | null;
-  jobs?: { title: string };
 }
 
 interface SlotFormData {
-  job_id: string;
   slot_date: string;
   start_time: string;
   end_time: string;
@@ -64,7 +50,6 @@ interface SlotFormData {
 }
 
 const defaultFormData: SlotFormData = {
-  job_id: '',
   slot_date: '',
   start_time: '09:00',
   end_time: '10:00',
@@ -74,7 +59,6 @@ const defaultFormData: SlotFormData = {
 
 export default function SlotManagement() {
   const [slots, setSlots] = useState<Slot[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -89,23 +73,10 @@ export default function SlotManagement() {
 
   const fetchData = async () => {
     try {
-      // Fetch jobs
-      const { data: jobsData, error: jobsError } = await supabase
-        .from('jobs')
-        .select('id, title')
-        .eq('is_active', true)
-        .order('title');
-
-      if (jobsError) throw jobsError;
-      setJobs(jobsData || []);
-
-      // Fetch slots with job info
+      // Fetch slots
       const { data: slotsData, error: slotsError } = await supabase
         .from('slots')
-        .select(`
-          *,
-          jobs:job_id (title)
-        `)
+        .select('*')
         .order('slot_date', { ascending: true })
         .order('start_time', { ascending: true });
 
@@ -132,21 +103,11 @@ export default function SlotManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.job_id) {
-      toast({
-        title: 'Error',
-        description: 'Please select a job',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     setSubmitting(true);
 
     try {
       const { error } = await supabase.from('slots').insert({
-        job_id: formData.job_id,
+        job_id: null,
         slot_date: formData.slot_date,
         start_time: formData.start_time,
         end_time: formData.end_time,
@@ -250,29 +211,11 @@ export default function SlotManagement() {
                 <DialogHeader>
                   <DialogTitle>Create New Slot</DialogTitle>
                   <DialogDescription>
-                    Create a new time slot for tests
+                    Create a universal time slot available for all job applicants
                   </DialogDescription>
                 </DialogHeader>
                 
                 <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="job">Job *</Label>
-                    <Select
-                      value={formData.job_id}
-                      onValueChange={(value) => setFormData({ ...formData, job_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a job" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {jobs.map((job) => (
-                          <SelectItem key={job.id} value={job.id}>
-                            {job.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="slot_date">Date *</Label>
@@ -344,15 +287,6 @@ export default function SlotManagement() {
           </Dialog>
         </div>
 
-        {jobs.length === 0 && (
-          <Card className="mb-6 border-warning bg-warning/5">
-            <CardContent className="pt-6">
-              <p className="text-warning-foreground">
-                You need to create at least one active job before creating slots.
-              </p>
-            </CardContent>
-          </Card>
-        )}
 
         <Card>
           <CardHeader>
@@ -364,17 +298,14 @@ export default function SlotManagement() {
               <div className="text-center py-8">
                 <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">No slots created yet</p>
-                {jobs.length > 0 && (
-                  <Button className="mt-4" onClick={handleOpenDialog}>
-                    <Plus className="mr-2 h-4 w-4" /> Create Your First Slot
-                  </Button>
-                )}
+                <Button className="mt-4" onClick={handleOpenDialog}>
+                  <Plus className="mr-2 h-4 w-4" /> Create Your First Slot
+                </Button>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Job</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Time</TableHead>
                     <TableHead>Capacity</TableHead>
@@ -385,7 +316,6 @@ export default function SlotManagement() {
                 <TableBody>
                   {slots.map((slot) => (
                     <TableRow key={slot.id}>
-                      <TableCell className="font-medium">{slot.jobs?.title || 'Unknown'}</TableCell>
                       <TableCell>
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
