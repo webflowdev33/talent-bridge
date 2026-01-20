@@ -17,6 +17,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import JobManagement from "./pages/admin/JobManagement";
 import SlotManagement from "./pages/admin/SlotManagement";
 import ApplicationManagement from "./pages/admin/ApplicationManagement";
+import QuestionManagement from "./pages/admin/QuestionManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -76,6 +77,11 @@ const App = () => (
             <Route path="/admin/applications" element={
               <ProtectedRoute requiredRole="admin">
                 <ApplicationManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/questions" element={
+              <ProtectedRoute requiredRole="admin">
+                <QuestionManagement />
               </ProtectedRoute>
             } />
 
