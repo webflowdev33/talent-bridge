@@ -38,6 +38,7 @@ interface Job {
   salary_range: string | null;
   requirements: string | null;
   total_rounds: number | null;
+  question_count: number | null;
   is_active: boolean | null;
   created_at: string | null;
 }
@@ -50,6 +51,7 @@ interface JobFormData {
   salary_range: string;
   requirements: string;
   total_rounds: number;
+  question_count: number;
   is_active: boolean;
 }
 
@@ -61,6 +63,7 @@ const defaultFormData: JobFormData = {
   salary_range: '',
   requirements: '',
   total_rounds: 1,
+  question_count: 10,
   is_active: true,
 };
 
@@ -109,6 +112,7 @@ export default function JobManagement() {
         salary_range: job.salary_range || '',
         requirements: job.requirements || '',
         total_rounds: job.total_rounds || 1,
+        question_count: job.question_count || 10,
         is_active: job.is_active ?? true,
       });
     } else {
@@ -135,6 +139,7 @@ export default function JobManagement() {
             salary_range: formData.salary_range,
             requirements: formData.requirements,
             total_rounds: formData.total_rounds,
+            question_count: formData.question_count,
             is_active: formData.is_active,
           })
           .eq('id', selectedJob.id);
@@ -151,6 +156,7 @@ export default function JobManagement() {
           salary_range: formData.salary_range,
           requirements: formData.requirements,
           total_rounds: formData.total_rounds,
+          question_count: formData.question_count,
           is_active: formData.is_active,
         });
 
@@ -309,6 +315,21 @@ export default function JobManagement() {
                         onChange={(e) => setFormData({ ...formData, total_rounds: parseInt(e.target.value) || 1 })}
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="question_count">Number of Questions to Display</Label>
+                    <Input
+                      id="question_count"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={formData.question_count}
+                      onChange={(e) => setFormData({ ...formData, question_count: parseInt(e.target.value) || 10 })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Questions will be randomly selected from the pool during the test.
+                    </p>
                   </div>
 
                   <div className="space-y-2">
