@@ -266,7 +266,7 @@ export type Database = {
           end_time: string
           id: string
           is_enabled: boolean | null
-          job_id: string
+          job_id: string | null
           max_capacity: number | null
           slot_date: string
           start_time: string
@@ -277,7 +277,7 @@ export type Database = {
           end_time: string
           id?: string
           is_enabled?: boolean | null
-          job_id: string
+          job_id?: string | null
           max_capacity?: number | null
           slot_date: string
           start_time: string
@@ -288,7 +288,7 @@ export type Database = {
           end_time?: string
           id?: string
           is_enabled?: boolean | null
-          job_id?: string
+          job_id?: string | null
           max_capacity?: number | null
           slot_date?: string
           start_time?: string
