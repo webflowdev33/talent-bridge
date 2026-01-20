@@ -292,11 +292,20 @@ export default function Dashboard() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                           <Badge className={status.color}>
                             <StatusIcon className="h-3 w-3 mr-1" />
                             {status.label}
                           </Badge>
+                          {/* Show Select Slot if applied but no slot selected */}
+                          {app.status === 'applied' && !app.slots && (
+                            <Button size="sm" asChild variant="outline">
+                              <Link to={`/select-slot/${app.id}`}>
+                                Select Slot
+                              </Link>
+                            </Button>
+                          )}
+                          {/* Show Start Test if test is enabled */}
                           {app.test_enabled && app.status !== 'test_taken' && app.status !== 'passed' && app.status !== 'failed' && (
                             <Button size="sm" asChild>
                               <Link to={`/test/${app.id}`}>

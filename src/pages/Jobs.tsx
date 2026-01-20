@@ -171,9 +171,9 @@ export default function Jobs() {
                           })}
                         </p>
                         {user ? (
-                          <Button asChild>
+                          <Button asChild variant="hero">
                             <Link to={`/jobs/${job.id}`}>
-                              View Details
+                              Apply Now
                               <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
                           </Button>

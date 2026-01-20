@@ -10,6 +10,9 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Jobs from "./pages/Jobs";
+import JobDetails from "./pages/JobDetails";
+import SelectSlot from "./pages/SelectSlot";
+import Test from "./pages/Test";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import JobManagement from "./pages/admin/JobManagement";
 import SlotManagement from "./pages/admin/SlotManagement";
@@ -30,6 +33,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/jobs" element={<Jobs />} />
+            <Route path="/jobs/:jobId" element={<JobDetails />} />
 
             {/* User Protected Routes */}
             <Route path="/dashboard" element={
@@ -40,6 +44,16 @@ const App = () => (
             <Route path="/profile" element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="/select-slot/:applicationId" element={
+              <ProtectedRoute>
+                <SelectSlot />
+              </ProtectedRoute>
+            } />
+            <Route path="/test/:applicationId" element={
+              <ProtectedRoute>
+                <Test />
               </ProtectedRoute>
             } />
 
