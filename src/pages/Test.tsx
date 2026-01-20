@@ -46,6 +46,7 @@ interface Application {
   jobs: {
     title: string;
     total_rounds: number | null;
+    question_count: number | null;
   };
 }
 
@@ -213,7 +214,7 @@ export default function Test() {
       // Fetch application
       const { data: appData, error: appError } = await supabase
         .from('applications')
-        .select('id, current_round, test_enabled, job_id, jobs (title, total_rounds)')
+        .select('id, current_round, test_enabled, job_id, jobs (title, total_rounds, question_count)')
         .eq('id', applicationId)
         .eq('user_id', user!.id)
         .single();
@@ -302,9 +303,11 @@ export default function Test() {
 
       if (questionsError) throw questionsError;
       
-      // Shuffle questions randomly
+      // Shuffle questions randomly and limit to question_count set by admin
       const shuffledQuestions = shuffleArray(questionsData || []);
-      setQuestions(shuffledQuestions);
+      const questionLimit = (appData as unknown as Application).jobs?.question_count || 10;
+      const limitedQuestions = shuffledQuestions.slice(0, questionLimit);
+      setQuestions(limitedQuestions);
 
     } catch (err) {
       console.error('Error initializing test:', err);
@@ -380,12 +383,13 @@ export default function Test() {
     
     setSubmitting(true);
     try {
-      // Calculate score
+      // Calculate score - only for questions that were displayed to the user
+      const displayedQuestionIds = questions.map(q => q.id);
+      
       const { data: questionsWithAnswers } = await supabase
         .from('questions')
         .select('id, correct_answer, marks')
-        .eq('job_id', application!.job_id)
-        .eq('round_number', application!.current_round);
+        .in('id', displayedQuestionIds);
 
       let totalMarks = 0;
       let obtainedMarks = 0;

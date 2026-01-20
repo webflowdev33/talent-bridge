@@ -119,6 +119,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           location: string | null
+          question_count: number | null
           requirements: string | null
           salary_range: string | null
           title: string
@@ -133,6 +134,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           location?: string | null
+          question_count?: number | null
           requirements?: string | null
           salary_range?: string | null
           title: string
@@ -147,6 +149,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           location?: string | null
+          question_count?: number | null
           requirements?: string | null
           salary_range?: string | null
           title?: string
