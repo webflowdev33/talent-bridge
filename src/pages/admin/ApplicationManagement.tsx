@@ -49,7 +49,10 @@ import {
   ArrowUpRight,
   Loader2,
   UserCheck,
-  Play
+  Play,
+  Trash2,
+  Layers,
+  Users
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -85,8 +88,12 @@ export default function ApplicationManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [roundFilter, setRoundFilter] = useState<string>('all');
+  const [groupByRound, setGroupByRound] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [applicationToDelete, setApplicationToDelete] = useState<Application | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -244,6 +251,81 @@ export default function ApplicationManagement() {
     }
   };
 
+  const handleMarkAsPassed = async (application: Application) => {
+    setActionLoading(application.id);
+    try {
+      const { error } = await supabase
+        .from('applications')
+        .update({ status: 'passed', test_enabled: false })
+        .eq('id', application.id);
+
+      if (error) throw error;
+      toast({ title: 'Success', description: 'Candidate marked as passed for this round.' });
+      fetchApplications();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!applicationToDelete) return;
+
+    setActionLoading(applicationToDelete.id);
+    try {
+      const { error } = await supabase
+        .from('applications')
+        .delete()
+        .eq('id', applicationToDelete.id);
+
+      if (error) throw error;
+      
+      toast({ 
+        title: 'Success', 
+        description: 'Application deleted successfully. Candidate can now apply again.' 
+      });
+      setDeleteDialogOpen(false);
+      setApplicationToDelete(null);
+      fetchApplications();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleViewResume = async (resumePath: string) => {
+    try {
+      // Generate a signed URL for the resume (valid for 1 hour)
+      const { data, error } = await supabase.storage
+        .from('resumes')
+        .createSignedUrl(resumePath, 3600); // 1 hour expiry
+
+      if (error) throw error;
+
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank');
+      } else {
+        throw new Error('Failed to generate resume URL');
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to open resume. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getStatusBadge = (application: Application) => {
     const status = application.status;
     const approved = application.admin_approved;
@@ -276,16 +358,40 @@ export default function ApplicationManagement() {
       app.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.jobs?.title?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    if (statusFilter === 'all') return matchesSearch;
-    if (statusFilter === 'pending') return matchesSearch && !app.admin_approved && app.status === 'applied';
-    if (statusFilter === 'approved') return matchesSearch && app.admin_approved && app.status === 'applied';
-    if (statusFilter === 'test_enabled') return matchesSearch && app.test_enabled;
-    if (statusFilter === 'passed') return matchesSearch && app.status === 'passed';
-    if (statusFilter === 'failed') return matchesSearch && app.status === 'failed';
-    if (statusFilter === 'selected') return matchesSearch && app.status === 'selected';
-    if (statusFilter === 'rejected') return matchesSearch && app.status === 'rejected';
-    return matchesSearch;
+    const matchesStatus = 
+      statusFilter === 'all' ||
+      (statusFilter === 'pending' && !app.admin_approved && app.status === 'applied') ||
+      (statusFilter === 'approved' && app.admin_approved && app.status === 'applied') ||
+      (statusFilter === 'test_enabled' && app.test_enabled) ||
+      (statusFilter === 'passed' && app.status === 'passed') ||
+      (statusFilter === 'failed' && app.status === 'failed') ||
+      (statusFilter === 'selected' && app.status === 'selected') ||
+      (statusFilter === 'rejected' && app.status === 'rejected');
+
+    const matchesRound = 
+      roundFilter === 'all' ||
+      (roundFilter === 'round_1' && app.current_round === 1) ||
+      (roundFilter === 'round_2' && app.current_round === 2) ||
+      (roundFilter === 'round_3' && app.current_round === 3) ||
+      (roundFilter === 'round_4' && app.current_round === 4) ||
+      (roundFilter === 'round_5' && app.current_round === 5) ||
+      (roundFilter === 'final' && app.current_round === app.jobs?.total_rounds);
+
+    return matchesSearch && matchesStatus && matchesRound;
   });
+
+  // Group applications by round
+  const groupedByRound = groupByRound ? filteredApplications.reduce((acc, app) => {
+    const round = app.current_round || 1;
+    if (!acc[round]) {
+      acc[round] = [];
+    }
+    acc[round].push(app);
+    return acc;
+  }, {} as Record<number, Application[]>) : null;
+
+  // Get unique rounds for filter
+  const availableRounds = Array.from(new Set(applications.map(app => app.current_round || 1))).sort((a, b) => a - b);
 
   if (loading) {
     return (
@@ -312,34 +418,59 @@ export default function ApplicationManagement() {
         {/* Filters */}
         <Card className="mb-6">
           <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by name, email, or job title..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name, email, or job title..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
                 </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[200px]">
+                    <Filter className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending Approval</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="test_enabled">Test Enabled</SelectItem>
+                    <SelectItem value="passed">Passed</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                    <SelectItem value="selected">Selected</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={roundFilter} onValueChange={setRoundFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <Layers className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="Filter by round" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Rounds</SelectItem>
+                    {availableRounds.map(round => (
+                      <SelectItem key={round} value={`round_${round}`}>
+                        Round {round}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="final">Final Round</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant={groupByRound ? "default" : "outline"}
+                  onClick={() => setGroupByRound(!groupByRound)}
+                  className="w-[180px]"
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  {groupByRound ? 'Ungroup' : 'Group by Round'}
+                </Button>
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[200px]">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Applications</SelectItem>
-                  <SelectItem value="pending">Pending Approval</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="test_enabled">Test Enabled</SelectItem>
-                  <SelectItem value="passed">Passed</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
-                  <SelectItem value="selected">Selected</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </CardContent>
         </Card>
@@ -349,6 +480,11 @@ export default function ApplicationManagement() {
             <CardTitle>Applications</CardTitle>
             <CardDescription>
               {filteredApplications.length} of {applications.length} application(s)
+              {groupByRound && groupedByRound && (
+                <span className="ml-2">
+                  • {Object.keys(groupedByRound).length} round(s)
+                </span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -356,7 +492,137 @@ export default function ApplicationManagement() {
               <div className="text-center py-8">
                 <p className="text-muted-foreground">No applications found</p>
               </div>
+            ) : groupByRound && groupedByRound ? (
+              // Grouped by Round View
+              <div className="space-y-6">
+                {Object.entries(groupedByRound)
+                  .sort(([a], [b]) => Number(a) - Number(b))
+                  .map(([round, roundApps]) => (
+                    <div key={round} className="space-y-3">
+                      <div className="flex items-center gap-3 pb-2 border-b">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Layers className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg">Round {round}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {roundApps.length} candidate{roundApps.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Applicant</TableHead>
+                            <TableHead>Job</TableHead>
+                            <TableHead>Slot</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Test</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {roundApps.map((app) => (
+                            <TableRow key={app.id}>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{app.profiles?.full_name || 'Unknown'}</p>
+                                  <p className="text-sm text-muted-foreground">{app.profiles?.email}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>{app.jobs?.title || 'Unknown'}</TableCell>
+                              <TableCell>
+                                {app.slots ? (
+                                  <span className="text-sm">
+                                    {format(new Date(app.slots.slot_date), 'MMM dd')} at {app.slots.start_time}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">Not selected</span>
+                                )}
+                              </TableCell>
+                              <TableCell>{getStatusBadge(app)}</TableCell>
+                              <TableCell>
+                                {app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && (
+                                  <Switch
+                                    checked={app.test_enabled ?? false}
+                                    onCheckedChange={() => handleEnableTest(app)}
+                                    disabled={actionLoading === app.id}
+                                  />
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" disabled={actionLoading === app.id}>
+                                      {actionLoading === app.id ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedApplication(app);
+                                      setDetailsDialogOpen(true);
+                                    }}>
+                                      <Eye className="mr-2 h-4 w-4" />
+                                      View Details
+                                    </DropdownMenuItem>
+                                    {app.profiles?.resume_url && (
+                                      <DropdownMenuItem onClick={() => handleViewResume(app.profiles!.resume_url!)}>
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        View Resume
+                                      </DropdownMenuItem>
+                                    )}
+                                    {!app.admin_approved && app.status !== 'rejected' && (
+                                      <>
+                                        <DropdownMenuItem onClick={() => handleApprove(app)}>
+                                          <CheckCircle className="mr-2 h-4 w-4 text-success" />
+                                          Approve
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleReject(app)}>
+                                          <XCircle className="mr-2 h-4 w-4 text-destructive" />
+                                          Reject
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+                                    {app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && app.status !== 'passed' && (
+                                      <DropdownMenuItem onClick={() => handleMarkAsPassed(app)}>
+                                        <UserCheck className="mr-2 h-4 w-4 text-success" />
+                                        Mark as Passed
+                                      </DropdownMenuItem>
+                                    )}
+                                    {app.admin_approved && app.status === 'passed' && (
+                                      <DropdownMenuItem onClick={() => handleMoveToNextRound(app)}>
+                                        <ArrowUpRight className="mr-2 h-4 w-4" />
+                                        {(app.current_round || 1) >= (app.jobs?.total_rounds || 1) 
+                                          ? 'Select Candidate' 
+                                          : `Move to Round ${(app.current_round || 1) + 1}`}
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem 
+                                      onClick={() => {
+                                        setApplicationToDelete(app);
+                                        setDeleteDialogOpen(true);
+                                      }}
+                                      className="text-destructive focus:text-destructive"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete Application
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ))}
+              </div>
             ) : (
+              // Standard Table View
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -421,7 +687,7 @@ export default function ApplicationManagement() {
                               View Details
                             </DropdownMenuItem>
                             {app.profiles?.resume_url && (
-                              <DropdownMenuItem onClick={() => window.open(app.profiles?.resume_url!, '_blank')}>
+                              <DropdownMenuItem onClick={() => handleViewResume(app.profiles!.resume_url!)}>
                                 <FileText className="mr-2 h-4 w-4" />
                                 View Resume
                               </DropdownMenuItem>
@@ -438,6 +704,12 @@ export default function ApplicationManagement() {
                                 </DropdownMenuItem>
                               </>
                             )}
+                            {app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && app.status !== 'passed' && (
+                              <DropdownMenuItem onClick={() => handleMarkAsPassed(app)}>
+                                <UserCheck className="mr-2 h-4 w-4 text-success" />
+                                Mark as Passed
+                              </DropdownMenuItem>
+                            )}
                             {app.admin_approved && app.status === 'passed' && (
                               <DropdownMenuItem onClick={() => handleMoveToNextRound(app)}>
                                 <ArrowUpRight className="mr-2 h-4 w-4" />
@@ -446,6 +718,16 @@ export default function ApplicationManagement() {
                                   : `Move to Round ${(app.current_round || 1) + 1}`}
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setApplicationToDelete(app);
+                                setDeleteDialogOpen(true);
+                              }}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Application
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -516,6 +798,36 @@ export default function ApplicationManagement() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Application</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the application for {applicationToDelete?.profiles?.full_name || 'this candidate'}? 
+              This will remove the application and all associated test attempts. The candidate will be able to apply again. 
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setDeleteDialogOpen(false);
+              setApplicationToDelete(null);
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDelete} 
+              disabled={actionLoading === applicationToDelete?.id}
+            >
+              {actionLoading === applicationToDelete?.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

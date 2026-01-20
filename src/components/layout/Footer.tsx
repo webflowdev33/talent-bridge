@@ -12,7 +12,7 @@ export function Footer() {
                 <Briefcase className="h-5 w-5 text-primary-foreground" />
               </div>
               <span className="font-display text-xl font-bold text-foreground">
-                TalentFlow
+                Testrow
               </span>
             </Link>
             <p className="text-sm text-muted-foreground">
@@ -28,11 +28,11 @@ export function Footer() {
                   Job Openings
                 </Link>
               </li>
-              <li>
+              {/* <li>
                 <Link to="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   About Us
                 </Link>
-              </li>
+              </li> */}
             </ul>
           </div>
 
@@ -76,7 +76,7 @@ export function Footer() {
 
         <div className="mt-8 pt-8 border-t border-border">
           <p className="text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} TalentFlow. All rights reserved.
+            © {new Date().getFullYear()} Testrow. All rights reserved.
           </p>
         </div>
       </div>

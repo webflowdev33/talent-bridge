@@ -108,7 +108,7 @@ export default function Index() {
       <section className="py-20 bg-muted/30">
         <div className="container">
           <div className="text-center mb-12">
-            <h2 className="font-display text-3xl font-bold">Why Choose TalentFlow?</h2>
+            <h2 className="font-display text-3xl font-bold">Why Choose Testrow?</h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
               Our platform provides everything you need for efficient and secure candidate assessment.
             </p>
@@ -175,7 +175,7 @@ export default function Index() {
               Ready to Find Your Next Opportunity?
             </h2>
             <p className="text-white/80 mb-8">
-              Join thousands of candidates who have successfully landed their dream jobs through TalentFlow.
+              Join thousands of candidates who have successfully landed their dream jobs through Testrow.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button variant="hero" size="lg" asChild className="bg-white text-primary hover:bg-white/90">

@@ -32,7 +32,7 @@ export function Header() {
             <Briefcase className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="font-display text-xl font-bold text-foreground">
-            TalentFlow
+            Testrow
           </span>
         </Link>
 
@@ -43,12 +43,7 @@ export function Header() {
           >
             Job Openings
           </Link>
-          <Link 
-            to="/about" 
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            About
-          </Link>
+          
         </nav>
 
         <div className="flex items-center gap-4">

@@ -5,15 +5,15 @@
 @tailwind utilities;
 
 /* 
-  Design System: TalentFlow
-  A professional corporate aesthetic with trust-inspiring blue-teal palette
-  Conveying innovation, reliability, and modern tech sophistication
+  Design System: Testrow
+  A professional testing platform with vibrant red primary and clean gray secondary
+  Conveying energy, precision, and modern assessment technology
 */
 
 @layer base {
   :root {
     /* Core brand colors - Professional blue-teal palette */
-    --background: 210 20% 98%;
+    --background: 0 0% 91%;
     --foreground: 220 30% 15%;
 
     --card: 0 0% 100%;
@@ -22,16 +22,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 30% 15%;
 
-    /* Primary: Deep corporate blue */
-    --primary: 215 80% 45%;
+    /* Primary: Vibrant red (#e90e1d) */
+    --primary: 354 89% 48%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Soft teal accent */
-    --secondary: 180 35% 94%;
-    --secondary-foreground: 215 80% 35%;
+    /* Secondary: Light gray background (#e7e7e7) */
+    --secondary: 0 0% 91%;
+    --secondary-foreground: 220 30% 15%;
 
-    /* Muted: Gentle gray-blue */
-    --muted: 210 20% 95%;
+    /* Muted: Light gray background */
+    --muted: 0 0% 91%;
     --muted-foreground: 215 15% 45%;
 
     /* Accent: Vibrant teal for highlights */
@@ -50,9 +50,9 @@
     --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 215 25% 88%;
-    --input: 215 25% 88%;
-    --ring: 215 80% 45%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 354 89% 48%;
 
     --radius: 0.75rem;
 
@@ -67,9 +67,9 @@
     --sidebar-ring: 175 70% 45%;
 
     /* Custom gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(215 80% 45%) 0%, hsl(175 70% 40%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(220 30% 12%) 0%, hsl(215 50% 25%) 50%, hsl(175 50% 30%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(354 89% 48%) 0%, hsl(354 89% 42%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(220 30% 12%) 0%, hsl(354 89% 35%) 50%, hsl(354 89% 40%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(0 0% 98%) 100%);
     --gradient-success: linear-gradient(135deg, hsl(160 70% 40%) 0%, hsl(175 70% 45%) 100%);
 
     /* Shadows */
@@ -77,7 +77,7 @@
     --shadow-md: 0 4px 6px -1px hsl(220 30% 15% / 0.08), 0 2px 4px -1px hsl(220 30% 15% / 0.04);
     --shadow-lg: 0 10px 15px -3px hsl(220 30% 15% / 0.1), 0 4px 6px -2px hsl(220 30% 15% / 0.05);
     --shadow-xl: 0 20px 25px -5px hsl(220 30% 15% / 0.1), 0 10px 10px -5px hsl(220 30% 15% / 0.04);
-    --shadow-glow: 0 0 40px hsl(215 80% 45% / 0.15);
+    --shadow-glow: 0 0 40px hsl(354 89% 48% / 0.15);
   }
 
   .dark {
@@ -90,16 +90,16 @@
     --popover: 220 28% 12%;
     --popover-foreground: 210 20% 95%;
 
-    --primary: 215 80% 55%;
+    --primary: 354 89% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 25% 18%;
-    --secondary-foreground: 175 70% 60%;
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 0 0% 91%;
 
-    --muted: 220 25% 15%;
+    --muted: 0 0% 15%;
     --muted-foreground: 215 15% 60%;
 
-    --accent: 175 70% 50%;
+    --accent: 354 89% 50%;
     --accent-foreground: 0 0% 100%;
 
     --success: 160 70% 50%;
@@ -113,7 +113,7 @@
 
     --border: 220 25% 20%;
     --input: 220 25% 20%;
-    --ring: 175 70% 50%;
+    --ring: 354 89% 50%;
 
     --sidebar-background: 220 30% 6%;
     --sidebar-foreground: 210 20% 95%;

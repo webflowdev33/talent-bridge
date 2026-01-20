@@ -43,6 +43,14 @@ interface Job {
   created_at: string | null;
 }
 
+interface JobRound {
+  id?: string;
+  job_id?: string;
+  round_number: number;
+  name: string;
+  description: string;
+}
+
 interface JobFormData {
   title: string;
   description: string;
@@ -74,6 +82,7 @@ export default function JobManagement() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [formData, setFormData] = useState<JobFormData>(defaultFormData);
+  const [jobRounds, setJobRounds] = useState<JobRound[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -115,9 +124,30 @@ export default function JobManagement() {
         question_count: job.question_count || 10,
         is_active: job.is_active ?? true,
       });
+
+      // Load existing rounds for this job
+      supabase
+        .from('job_rounds')
+        .select('id, job_id, round_number, name, description')
+        .eq('job_id', job.id)
+        .order('round_number', { ascending: true })
+        .then(({ data, error }) => {
+          if (!error && data) {
+            setJobRounds(
+              data.map((r) => ({
+                id: r.id,
+                job_id: r.job_id,
+                round_number: r.round_number,
+                name: r.name,
+                description: r.description || '',
+              }))
+            );
+          }
+        });
     } else {
       setSelectedJob(null);
       setFormData(defaultFormData);
+      setJobRounds([]);
     }
     setDialogOpen(true);
   };
@@ -145,22 +175,51 @@ export default function JobManagement() {
           .eq('id', selectedJob.id);
 
         if (error) throw error;
+
+        // Replace rounds for this job
+        await supabase.from('job_rounds').delete().eq('job_id', selectedJob.id);
+        if (jobRounds.length > 0) {
+          await supabase.from('job_rounds').insert(
+            jobRounds.map((r) => ({
+              job_id: selectedJob.id,
+              round_number: r.round_number,
+              name: r.name,
+              description: r.description,
+            }))
+          );
+        }
         toast({ title: 'Success', description: 'Job updated successfully' });
       } else {
         // Create new job
-        const { error } = await supabase.from('jobs').insert({
-          title: formData.title,
-          description: formData.description,
-          department: formData.department,
-          location: formData.location,
-          salary_range: formData.salary_range,
-          requirements: formData.requirements,
-          total_rounds: formData.total_rounds,
-          question_count: formData.question_count,
-          is_active: formData.is_active,
-        });
+        const { data, error } = await supabase
+          .from('jobs')
+          .insert({
+            title: formData.title,
+            description: formData.description,
+            department: formData.department,
+            location: formData.location,
+            salary_range: formData.salary_range,
+            requirements: formData.requirements,
+            total_rounds: formData.total_rounds,
+            question_count: formData.question_count,
+            is_active: formData.is_active,
+          })
+          .select('id')
+          .single();
 
         if (error) throw error;
+
+        const newJobId = data.id;
+        if (jobRounds.length > 0) {
+          await supabase.from('job_rounds').insert(
+            jobRounds.map((r) => ({
+              job_id: newJobId,
+              round_number: r.round_number,
+              name: r.name,
+              description: r.description,
+            }))
+          );
+        }
         toast({ title: 'Success', description: 'Job created successfully' });
       }
 
@@ -292,6 +351,109 @@ export default function JobManagement() {
                         placeholder="e.g., Remote, New York"
                       />
                     </div>
+                  </div>
+
+                  {/* Interview Rounds Definition */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Interview Rounds</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Define each round for this job (e.g. Screening, Technical, HR).
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const nextRound =
+                            jobRounds.length > 0
+                              ? Math.max(...jobRounds.map((r) => r.round_number)) + 1
+                              : 1;
+                          setJobRounds([
+                            ...jobRounds,
+                            { round_number: nextRound, name: `Round ${nextRound}`, description: '' },
+                          ]);
+                        }}
+                      >
+                        <Plus className="mr-1 h-3 w-3" /> Add Round
+                      </Button>
+                    </div>
+
+                    {jobRounds.length > 0 ? (
+                      <div className="space-y-3">
+                        {jobRounds
+                          .slice()
+                          .sort((a, b) => a.round_number - b.round_number)
+                          .map((round, idx) => (
+                            <div
+                              key={`${round.round_number}-${idx}`}
+                              className="grid grid-cols-1 md:grid-cols-[80px,1fr,auto] gap-3 items-start p-3 rounded-md border bg-muted/40"
+                            >
+                              <div className="space-y-1">
+                                <Label className="text-xs text-muted-foreground">Round #</Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={10}
+                                  value={round.round_number}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value) || 1;
+                                    setJobRounds((prev) =>
+                                      prev.map((r, i) =>
+                                        i === idx ? { ...r, round_number: value } : r
+                                      )
+                                    );
+                                  }}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs text-muted-foreground">Name</Label>
+                                <Input
+                                  value={round.name}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    setJobRounds((prev) =>
+                                      prev.map((r, i) =>
+                                        i === idx ? { ...r, name: value } : r
+                                      )
+                                    );
+                                  }}
+                                  placeholder="e.g., Screening, Technical Interview, HR Round"
+                                />
+                                <Textarea
+                                  className="mt-2"
+                                  rows={2}
+                                  value={round.description}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    setJobRounds((prev) =>
+                                      prev.map((r, i) =>
+                                        i === idx ? { ...r, description: value } : r
+                                      )
+                                    );
+                                  }}
+                                  placeholder="Short description of what is evaluated in this round"
+                                />
+                              </div>
+                              <div className="flex md:flex-col gap-2 justify-between md:justify-start md:items-end">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    setJobRounds((prev) => prev.filter((_, i) => i !== idx));
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">

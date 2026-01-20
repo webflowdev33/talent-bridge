@@ -103,7 +103,7 @@ export default function Auth() {
     } else {
       toast({
         title: 'Account Created!',
-        description: 'Welcome to TalentFlow. Please complete your profile.',
+        description: 'Welcome to Testrow. Please complete your profile.',
       });
       navigate('/profile');
     }
@@ -191,7 +191,7 @@ export default function Auth() {
               <Briefcase className="h-6 w-6 text-primary-foreground" />
             </div>
           </Link>
-          <CardTitle className="font-display text-2xl">Welcome to TalentFlow</CardTitle>
+          <CardTitle className="font-display text-2xl">Welcome to Testrow</CardTitle>
           <CardDescription>
             Sign in to your account or create a new one to get started.
           </CardDescription>

@@ -56,6 +56,41 @@ export type Database = {
           },
         ]
       }
+      job_rounds: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          job_id: string
+          name: string
+          round_number: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          job_id: string
+          name: string
+          round_number: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          job_id?: string
+          name?: string
+          round_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_rounds_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           admin_approved: boolean | null

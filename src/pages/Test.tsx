@@ -50,6 +50,12 @@ interface Application {
   };
 }
 
+interface JobRound {
+  round_number: number;
+  name: string;
+  description: string | null;
+}
+
 // Shuffle array using Fisher-Yates algorithm
 const shuffleArray = <T,>(array: T[]): T[] => {
   const shuffled = [...array];
@@ -79,6 +85,7 @@ export default function Test() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
   const [testStarted, setTestStarted] = useState(false);
+  const [currentRoundInfo, setCurrentRoundInfo] = useState<JobRound | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -150,7 +157,8 @@ export default function Test() {
     const handleCopy = (e: ClipboardEvent) => {
       if (testAttemptId && !testCompleted) {
         e.preventDefault();
-        triggerViolation('copy_attempt', 'Copy-paste is not allowed during the test.');
+        // Use allowed enum value from database: 'copy_paste'
+        triggerViolation('copy_paste', 'Copy-paste is not allowed during the test.');
       }
     };
 
@@ -232,6 +240,18 @@ export default function Test() {
       }
 
       setApplication(appData as unknown as Application);
+
+      // Fetch current round information
+      const { data: roundData } = await supabase
+        .from('job_rounds')
+        .select('round_number, name, description')
+        .eq('job_id', appData.job_id)
+        .eq('round_number', appData.current_round)
+        .single();
+
+      if (roundData) {
+        setCurrentRoundInfo(roundData);
+      }
 
       // Check for existing test attempt
       const { data: existingAttempt } = await supabase
@@ -512,8 +532,11 @@ export default function Test() {
             <div className="bg-muted p-4 rounded-lg">
               <p className="text-sm font-medium">Job: {application?.jobs.title}</p>
               <p className="text-sm text-muted-foreground">
-                Round {application?.current_round} of {application?.jobs.total_rounds || 1}
+                {currentRoundInfo?.name || `Round ${application?.current_round}`} of {application?.jobs.total_rounds || 1}
               </p>
+              {currentRoundInfo?.description && (
+                <p className="text-xs text-muted-foreground mt-1">{currentRoundInfo.description}</p>
+              )}
               <p className="text-sm text-muted-foreground">Duration: 60 minutes</p>
               <p className="text-sm text-muted-foreground">Questions: {questions.length}</p>
             </div>
@@ -573,16 +596,19 @@ export default function Test() {
   const progress = questions.length > 0 ? (answeredCount / questions.length) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background select-none">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-card shadow-sm">
         <div className="container flex items-center justify-between py-4">
-          <div>
-            <h1 className="font-display font-bold">{application?.jobs.title}</h1>
-            <p className="text-sm text-muted-foreground">
-              Round {application?.current_round} of {application?.jobs.total_rounds || 1}
-            </p>
-          </div>
+            <div>
+              <h1 className="font-display font-bold">{application?.jobs.title}</h1>
+              <p className="text-sm text-muted-foreground">
+                {currentRoundInfo?.name || `Round ${application?.current_round}`} of {application?.jobs.total_rounds || 1}
+                {currentRoundInfo?.description && (
+                  <span className="block text-xs mt-0.5">{currentRoundInfo.description}</span>
+                )}
+              </p>
+            </div>
           <div className="flex items-center gap-4">
             {violationCount > 0 && (
               <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-destructive/10 text-destructive text-sm">

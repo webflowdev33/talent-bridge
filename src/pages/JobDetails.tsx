@@ -33,9 +33,16 @@ interface Job {
   created_at: string;
 }
 
+interface JobRound {
+  round_number: number;
+  name: string;
+  description: string | null;
+}
+
 export default function JobDetails() {
   const { jobId } = useParams<{ jobId: string }>();
   const [job, setJob] = useState<Job | null>(null);
+  const [jobRounds, setJobRounds] = useState<JobRound[]>([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [existingApplication, setExistingApplication] = useState<string | null>(null);
@@ -63,6 +70,17 @@ export default function JobDetails() {
 
       if (error) throw error;
       setJob(data);
+
+      // Fetch job rounds
+      const { data: roundsData } = await supabase
+        .from('job_rounds')
+        .select('round_number, name, description')
+        .eq('job_id', jobId)
+        .order('round_number', { ascending: true });
+
+      if (roundsData) {
+        setJobRounds(roundsData);
+      }
     } catch (err) {
       console.error('Error fetching job:', err);
       navigate('/jobs');
@@ -237,6 +255,36 @@ export default function JobDetails() {
                   <p className="text-muted-foreground whitespace-pre-line">
                     {job.requirements}
                   </p>
+                </div>
+              )}
+
+              {jobRounds.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="font-semibold mb-3">Interview Process</h3>
+                  <div className="space-y-3">
+                    {jobRounds.map((round) => (
+                      <div
+                        key={round.round_number}
+                        className="p-4 rounded-lg border bg-card"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <span className="text-sm font-semibold text-primary">
+                              {round.round_number}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-medium mb-1">{round.name}</h4>
+                            {round.description && (
+                              <p className="text-sm text-muted-foreground">
+                                {round.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

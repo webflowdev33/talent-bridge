@@ -17,7 +17,9 @@ import {
   AlertCircle,
   ArrowRight,
   FileText,
-  Loader2
+  Loader2,
+  Trophy,
+  Target
 } from 'lucide-react';
 
 interface Application {
@@ -37,6 +39,23 @@ interface Application {
     start_time: string;
     end_time: string;
   } | null;
+}
+
+interface TestAttempt {
+  id: string;
+  round_number: number;
+  is_passed: boolean | null;
+  obtained_marks: number | null;
+  total_marks: number | null;
+  is_submitted: boolean;
+  started_at: string;
+  application_id: string;
+}
+
+interface JobRound {
+  round_number: number;
+  name: string;
+  description: string | null;
 }
 
 interface Profile {
@@ -62,6 +81,8 @@ const statusConfig: Record<string, { label: string; color: string; icon: typeof 
 export default function Dashboard() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [testAttempts, setTestAttempts] = useState<TestAttempt[]>([]);
+  const [jobRoundsMap, setJobRoundsMap] = useState<Record<string, JobRound[]>>({});
   const [loading, setLoading] = useState(true);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -105,11 +126,107 @@ export default function Dashboard() {
         .order('created_at', { ascending: false });
 
       setApplications(appsData as unknown as Application[] || []);
+
+      // Fetch test attempts for round breakdown
+      const applicationIds = (appsData || []).map(app => app.id);
+      if (applicationIds.length > 0) {
+        const { data: attemptsData } = await supabase
+          .from('test_attempts')
+          .select('id, round_number, is_passed, obtained_marks, total_marks, is_submitted, started_at, application_id')
+          .in('application_id', applicationIds)
+          .eq('user_id', user!.id)
+          .order('round_number', { ascending: true });
+
+        setTestAttempts(attemptsData as TestAttempt[] || []);
+      }
+
+      // Fetch job rounds for all jobs
+      const jobIds = [...new Set((appsData || []).map(app => app.jobs?.id).filter(Boolean))];
+      if (jobIds.length > 0) {
+        const { data: roundsData } = await supabase
+          .from('job_rounds')
+          .select('job_id, round_number, name, description')
+          .in('job_id', jobIds)
+          .order('round_number', { ascending: true });
+
+        if (roundsData) {
+          const roundsMap: Record<string, JobRound[]> = {};
+          roundsData.forEach((round) => {
+            if (!roundsMap[round.job_id]) {
+              roundsMap[round.job_id] = [];
+            }
+            roundsMap[round.job_id].push({
+              round_number: round.round_number,
+              name: round.name,
+              description: round.description,
+            });
+          });
+          setJobRoundsMap(roundsMap);
+        }
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getRoundBreakdown = (app: Application) => {
+    const attempts = testAttempts.filter(ta => ta.application_id === app.id);
+    const jobRounds = jobRoundsMap[app.jobs.id] || [];
+    const rounds = [];
+    const total = app.jobs.total_rounds || 1;
+    const currentRound = app.current_round;
+
+    for (let i = 1; i <= total; i++) {
+      const attempt = attempts.find(ta => ta.round_number === i);
+      const roundInfo = jobRounds.find(r => r.round_number === i);
+      const roundName = roundInfo?.name || `Round ${i}`;
+      const roundDescription = roundInfo?.description || null;
+
+      let status: 'passed' | 'failed' | 'pending' = 'pending';
+      let score: number | null = null;
+      let maxScore: number | null = null;
+      let date: string | null = null;
+
+      if (attempt && attempt.is_submitted) {
+        status = attempt.is_passed ? 'passed' : 'failed';
+        score = attempt.obtained_marks || 0;
+        maxScore = attempt.total_marks || 0;
+        date = attempt.started_at;
+      } else {
+        // No attempt recorded - reflect admin-driven status for the current round
+        if (i === currentRound) {
+          if (app.status === 'passed' || app.status === 'selected') {
+            status = 'passed';
+          } else if (app.status === 'failed') {
+            status = 'failed';
+          }
+        } else if (i < currentRound && (app.status === 'selected' || app.status === 'passed')) {
+          // If candidate is selected or marked passed in a later round,
+          // earlier rounds must have been cleared
+          status = 'passed';
+        }
+      }
+
+      rounds.push({
+        round: i,
+        name: roundName,
+        description: roundDescription,
+        status,
+        score,
+        total: maxScore,
+        date,
+      });
+    }
+
+    return rounds;
+  };
+
+  const getCurrentRoundName = (jobId: string, currentRound: number) => {
+    const jobRounds = jobRoundsMap[jobId] || [];
+    const roundInfo = jobRounds.find(r => r.round_number === currentRound);
+    return roundInfo?.name || `Round ${currentRound}`;
   };
 
   if (authLoading || loading) {
@@ -266,54 +383,143 @@ export default function Dashboard() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {applications.map((app) => {
                     const status = statusConfig[app.status] || statusConfig.applied;
                     const StatusIcon = status.icon;
+                    const roundBreakdown = getRoundBreakdown(app);
+                    const clearedRounds = roundBreakdown.filter(r => r.status === 'passed').length;
                     
                     return (
-                      <div 
-                        key={app.id} 
-                        className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg border bg-card hover:shadow-md transition-shadow"
-                      >
-                        <div className="flex items-start gap-4 mb-4 md:mb-0">
-                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                            <Briefcase className="h-5 w-5 text-primary" />
-                          </div>
+                      <div key={app.id} className="space-y-4">
+                        <div 
+                          className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg border bg-card hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-start gap-4 mb-4 md:mb-0">
+                            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                              <Briefcase className="h-5 w-5 text-primary" />
+                            </div>
                           <div>
                             <h4 className="font-semibold">{app.jobs.title}</h4>
                             <p className="text-sm text-muted-foreground">
-                              {app.jobs.department} • Round {app.current_round} of {app.jobs.total_rounds || 1}
+                              {app.jobs.department} • {getCurrentRoundName(app.jobs.id, app.current_round)} of {app.jobs.total_rounds || 1}
                             </p>
-                            {app.slots && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Scheduled: {new Date(app.slots.slot_date).toLocaleDateString()} at {app.slots.start_time}
-                              </p>
+                              {app.slots && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  Scheduled: {new Date(app.slots.slot_date).toLocaleDateString()} at {app.slots.start_time}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge className={status.color}>
+                              <StatusIcon className="h-3 w-3 mr-1" />
+                              {status.label}
+                            </Badge>
+                            {/* Show Select Slot if applied but no slot selected */}
+                            {app.status === 'applied' && !app.slots && (
+                              <Button size="sm" asChild variant="outline">
+                                <Link to={`/select-slot/${app.id}`}>
+                                  Select Slot
+                                </Link>
+                              </Button>
+                            )}
+                            {/* Show Start Test if test is enabled */}
+                            {app.test_enabled && app.status !== 'test_taken' && app.status !== 'passed' && app.status !== 'failed' && (
+                              <Button size="sm" asChild>
+                                <Link to={`/test/${app.id}`}>
+                                  Start Test
+                                </Link>
+                              </Button>
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <Badge className={status.color}>
-                            <StatusIcon className="h-3 w-3 mr-1" />
-                            {status.label}
-                          </Badge>
-                          {/* Show Select Slot if applied but no slot selected */}
-                          {app.status === 'applied' && !app.slots && (
-                            <Button size="sm" asChild variant="outline">
-                              <Link to={`/select-slot/${app.id}`}>
-                                Select Slot
-                              </Link>
-                            </Button>
-                          )}
-                          {/* Show Start Test if test is enabled */}
-                          {app.test_enabled && app.status !== 'test_taken' && app.status !== 'passed' && app.status !== 'failed' && (
-                            <Button size="sm" asChild>
-                              <Link to={`/test/${app.id}`}>
-                                Start Test
-                              </Link>
-                            </Button>
-                          )}
-                        </div>
+
+                        {/* Congratulations Message for Selected Candidates */}
+                        {app.status === 'selected' ? (
+                          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800">
+                            <CardContent className="pt-6">
+                              <div className="flex flex-col items-center text-center py-6">
+                                <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
+                                  <Trophy className="h-8 w-8 text-green-600 dark:text-green-400" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-green-900 dark:text-green-100 mb-2">
+                                  Congratulations! 🎉
+                                </h3>
+                                <p className="text-green-700 dark:text-green-300 mb-1">
+                                  You have been selected for <strong>{app.jobs.title}</strong>
+                                </p>
+                                <p className="text-sm text-green-600 dark:text-green-400">
+                                  We'll be in touch with you shortly regarding the next steps.
+                                </p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ) : (
+                          /* Round Breakdown */
+                          app.jobs.total_rounds && app.jobs.total_rounds > 1 && (
+                            <Card className="bg-muted/50">
+                              <CardHeader className="pb-3">
+                                <div className="flex items-center gap-2">
+                                  <Target className="h-4 w-4 text-primary" />
+                                  <CardTitle className="text-base">Round Progress</CardTitle>
+                                  <Badge variant="outline" className="ml-auto">
+                                    {clearedRounds} of {app.jobs.total_rounds} cleared
+                                  </Badge>
+                                </div>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                  {roundBreakdown.map((round) => (
+                                    <div
+                                      key={round.round}
+                                      className={`p-3 rounded-lg border-2 transition-all ${
+                                        round.status === 'passed'
+                                          ? 'border-green-500 bg-green-50 dark:bg-green-950/20'
+                                          : round.status === 'failed'
+                                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                                          : 'border-muted bg-muted/50'
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex-1">
+                                          <span className="text-sm font-medium">{round.name}</span>
+                                          {round.description && (
+                                            <p className="text-xs text-muted-foreground mt-0.5">{round.description}</p>
+                                          )}
+                                        </div>
+                                        {round.status === 'passed' && (
+                                          <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                                        )}
+                                        {round.status === 'failed' && (
+                                          <XCircle className="h-4 w-4 text-red-600 shrink-0" />
+                                        )}
+                                        {round.status === 'pending' && (
+                                          <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        )}
+                                      </div>
+                                      {round.status === 'passed' && round.score !== null && (
+                                        <div className="text-xs text-muted-foreground">
+                                          Score: {round.score}/{round.total}
+                                        </div>
+                                      )}
+                                      {round.status === 'failed' && round.score !== null && (
+                                        <div className="text-xs text-muted-foreground">
+                                          Score: {round.score}/{round.total}
+                                        </div>
+                                      )}
+                                      {round.status === 'pending' && (
+                                        <div className="text-xs text-muted-foreground">
+                                          Not attempted
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )
+                        )}
                       </div>
                     );
                   })}
