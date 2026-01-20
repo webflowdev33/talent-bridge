@@ -23,6 +23,8 @@ import {
   ChevronRight,
   Send,
   Loader2,
+  Maximize,
+  Shield,
   Eye
 } from 'lucide-react';
 
@@ -36,11 +38,6 @@ interface Question {
   marks: number | null;
 }
 
-interface Answer {
-  question_id: string;
-  selected_answer: string | null;
-}
-
 interface Application {
   id: string;
   current_round: number;
@@ -51,6 +48,16 @@ interface Application {
     total_rounds: number | null;
   };
 }
+
+// Shuffle array using Fisher-Yates algorithm
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
 
 export default function Test() {
   const { applicationId } = useParams<{ applicationId: string }>();
@@ -64,9 +71,13 @@ export default function Test() {
   const [timeLeft, setTimeLeft] = useState(60 * 60); // 60 minutes default
   const [violationCount, setViolationCount] = useState(0);
   const [showWarning, setShowWarning] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [testCompleted, setTestCompleted] = useState(false);
   const [testResult, setTestResult] = useState<{ passed: boolean; score: number; total: number } | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
+  const [testStarted, setTestStarted] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -82,9 +93,9 @@ export default function Test() {
     };
   }, [applicationId, user]);
 
-  // Timer countdown
+  // Timer countdown - only start when test is started
   useEffect(() => {
-    if (testAttemptId && !testCompleted && timeLeft > 0) {
+    if (testAttemptId && !testCompleted && timeLeft > 0 && testStarted) {
       timerRef.current = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
@@ -98,30 +109,104 @@ export default function Test() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [testAttemptId, testCompleted]);
+  }, [testAttemptId, testCompleted, testStarted]);
 
-  // Violation detection
+  // Fullscreen change detection
   useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isNowFullscreen = !!document.fullscreenElement;
+      setIsFullscreen(isNowFullscreen);
+      
+      // If user exits fullscreen during test, count as violation
+      if (!isNowFullscreen && testStarted && testAttemptId && !testCompleted) {
+        triggerViolation('fullscreen_exit', 'You exited fullscreen mode. Please stay in fullscreen during the test.');
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, [testStarted, testAttemptId, testCompleted]);
+
+  // Violation detection - only when test is started
+  useEffect(() => {
+    if (!testStarted) return;
+    
     const handleVisibilityChange = () => {
       if (document.hidden && testAttemptId && !testCompleted) {
-        handleViolation('tab_switch');
+        triggerViolation('tab_switch', 'You switched to another tab. This is a violation.');
       }
     };
 
     const handleBlur = () => {
       if (testAttemptId && !testCompleted) {
-        handleViolation('window_blur');
+        triggerViolation('window_blur', 'You clicked outside the test window. Please stay focused on the test.');
+      }
+    };
+
+    // Prevent copy-paste
+    const handleCopy = (e: ClipboardEvent) => {
+      if (testAttemptId && !testCompleted) {
+        e.preventDefault();
+        triggerViolation('copy_attempt', 'Copy-paste is not allowed during the test.');
+      }
+    };
+
+    // Prevent right-click context menu
+    const handleContextMenu = (e: MouseEvent) => {
+      if (testAttemptId && !testCompleted) {
+        e.preventDefault();
+      }
+    };
+
+    // Prevent keyboard shortcuts
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (testAttemptId && !testCompleted) {
+        // Prevent Ctrl+C, Ctrl+V, Ctrl+A, etc.
+        if (e.ctrlKey || e.metaKey) {
+          if (['c', 'v', 'a', 'p', 's'].includes(e.key.toLowerCase())) {
+            e.preventDefault();
+            triggerViolation('keyboard_shortcut', 'Keyboard shortcuts are not allowed during the test.');
+          }
+        }
+        // Prevent F12 (DevTools)
+        if (e.key === 'F12') {
+          e.preventDefault();
+          triggerViolation('devtools_attempt', 'Developer tools are not allowed during the test.');
+        }
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleBlur);
+    document.addEventListener('copy', handleCopy);
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleBlur);
+      document.removeEventListener('copy', handleCopy);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [testAttemptId, testCompleted]);
+  }, [testStarted, testAttemptId, testCompleted]);
+
+  const enterFullscreen = async () => {
+    try {
+      await document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+      setShowFullscreenPrompt(false);
+      setTestStarted(true);
+    } catch (err) {
+      toast({
+        title: 'Fullscreen Required',
+        description: 'Please allow fullscreen to start the test.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const initializeTest = async () => {
     try {
@@ -164,6 +249,7 @@ export default function Test() {
             score: existingAttempt.obtained_marks || 0,
             total: existingAttempt.total_marks || 0,
           });
+          setShowFullscreenPrompt(false);
           setLoading(false);
           return;
         }
@@ -215,7 +301,10 @@ export default function Test() {
         .eq('round_number', appData.current_round);
 
       if (questionsError) throw questionsError;
-      setQuestions(questionsData || []);
+      
+      // Shuffle questions randomly
+      const shuffledQuestions = shuffleArray(questionsData || []);
+      setQuestions(shuffledQuestions);
 
     } catch (err) {
       console.error('Error initializing test:', err);
@@ -230,9 +319,10 @@ export default function Test() {
     }
   };
 
-  const handleViolation = async (type: string) => {
+  const triggerViolation = async (type: string, message: string) => {
     const newCount = violationCount + 1;
     setViolationCount(newCount);
+    setWarningMessage(message);
     setShowWarning(true);
 
     if (testAttemptId) {
@@ -244,7 +334,7 @@ export default function Test() {
       });
     }
 
-    if (newCount >= 3) {
+    if (newCount >= 2) {
       handleAutoSubmit();
     }
   };
@@ -282,6 +372,11 @@ export default function Test() {
 
   const submitTest = async (autoSubmit = false) => {
     if (!testAttemptId) return;
+    
+    // Exit fullscreen when submitting
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
     
     setSubmitting(true);
     try {
@@ -386,6 +481,53 @@ export default function Test() {
     );
   }
 
+  // Fullscreen prompt before test starts
+  if (showFullscreenPrompt && !testCompleted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-lg">
+          <CardHeader className="text-center">
+            <div className="h-16 w-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-primary/10">
+              <Shield className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">Proctored Test Environment</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-muted-foreground space-y-3">
+              <p className="font-medium text-foreground">Before you begin, please note:</p>
+              <ul className="list-disc list-inside space-y-2 text-sm">
+                <li>Test will run in <strong>fullscreen mode</strong></li>
+                <li>Switching tabs or windows is <strong>not allowed</strong></li>
+                <li>Copy-paste and keyboard shortcuts are <strong>disabled</strong></li>
+                <li><strong>2 violations</strong> will auto-submit your test</li>
+                <li>Timer starts once you enter fullscreen</li>
+                <li>Questions are randomly shuffled</li>
+              </ul>
+            </div>
+            
+            <div className="bg-muted p-4 rounded-lg">
+              <p className="text-sm font-medium">Job: {application?.jobs.title}</p>
+              <p className="text-sm text-muted-foreground">
+                Round {application?.current_round} of {application?.jobs.total_rounds || 1}
+              </p>
+              <p className="text-sm text-muted-foreground">Duration: 60 minutes</p>
+              <p className="text-sm text-muted-foreground">Questions: {questions.length}</p>
+            </div>
+
+            <Button onClick={enterFullscreen} className="w-full" size="lg">
+              <Maximize className="mr-2 h-5 w-5" />
+              Enter Fullscreen & Start Test
+            </Button>
+            
+            <Button variant="outline" onClick={() => navigate('/dashboard')} className="w-full">
+              Go Back
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (testCompleted && testResult) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -438,6 +580,12 @@ export default function Test() {
             </p>
           </div>
           <div className="flex items-center gap-4">
+            {violationCount > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-destructive/10 text-destructive text-sm">
+                <AlertTriangle className="h-4 w-4" />
+                {violationCount}/2 violations
+              </div>
+            )}
             <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono font-bold ${
               timeLeft <= 300 ? 'bg-destructive/10 text-destructive' : 'bg-muted'
             }`}>
@@ -619,17 +767,23 @@ export default function Test() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              Warning: Tab Switch Detected
+              Warning: Violation Detected
             </DialogTitle>
             <DialogDescription>
-              You have switched tabs or left the test window. This is recorded as a violation.
+              {warningMessage}
               <br /><br />
-              <strong>Violations: {violationCount} of 3</strong>
+              <strong className="text-destructive">Violations: {violationCount} of 2</strong>
               <br />
-              After 3 violations, your test will be automatically submitted.
+              After 2 violations, your test will be automatically submitted.
             </DialogDescription>
           </DialogHeader>
-          <Button onClick={() => setShowWarning(false)}>
+          <Button onClick={() => {
+            setShowWarning(false);
+            // Re-enter fullscreen if exited
+            if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen().catch(() => {});
+            }
+          }}>
             I Understand
           </Button>
         </DialogContent>
