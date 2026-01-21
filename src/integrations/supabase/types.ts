@@ -203,6 +203,8 @@ export type Database = {
           date_of_birth: string | null
           email: string | null
           full_name: string | null
+          guide_acknowledged: boolean | null
+          guide_acknowledged_at: string | null
           id: string
           phone: string | null
           profile_completed: boolean | null
@@ -221,6 +223,8 @@ export type Database = {
           date_of_birth?: string | null
           email?: string | null
           full_name?: string | null
+          guide_acknowledged?: boolean | null
+          guide_acknowledged_at?: string | null
           id?: string
           phone?: string | null
           profile_completed?: boolean | null
@@ -239,6 +243,8 @@ export type Database = {
           date_of_birth?: string | null
           email?: string | null
           full_name?: string | null
+          guide_acknowledged?: boolean | null
+          guide_acknowledged_at?: string | null
           id?: string
           phone?: string | null
           profile_completed?: boolean | null

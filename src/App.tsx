@@ -7,6 +7,7 @@ import { AuthProvider } from "@/lib/auth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Guide from "./pages/Guide";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Jobs from "./pages/Jobs";
@@ -35,6 +36,13 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/jobs/:jobId" element={<JobDetails />} />
+
+            {/* Guide Route - Protected but allows access before acknowledgment */}
+            <Route path="/guide" element={
+              <ProtectedRoute skipGuideCheck={true}>
+                <Guide />
+              </ProtectedRoute>
+            } />
 
             {/* User Protected Routes */}
             <Route path="/dashboard" element={

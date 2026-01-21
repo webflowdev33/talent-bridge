@@ -103,9 +103,9 @@ export default function Auth() {
     } else {
       toast({
         title: 'Account Created!',
-        description: 'Welcome to Testrow. Please complete your profile.',
+        description: 'Please Check you Mail and confirm you Identity to continue.',
       });
-      navigate('/profile');
+      navigate('/guide');
     }
   };
 

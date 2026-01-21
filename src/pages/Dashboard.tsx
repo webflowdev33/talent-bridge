@@ -441,7 +441,7 @@ export default function Dashboard() {
                                 asChild
                                 className="bg-primary text-white hover:bg-primary/90 font-semibold text-xs px-3 py-1.5 h-auto shadow-sm hover:shadow-md transition-all w-full sm:w-auto"
                               >
-                                <Link to={`/test-countdown/${app.id}`}>
+                                <Link to={`/test/${app.id}`}>
                                   Start Test
                                 </Link>
                               </Button>
