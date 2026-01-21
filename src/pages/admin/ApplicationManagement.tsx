@@ -278,6 +278,28 @@ export default function ApplicationManagement() {
 
     setActionLoading(applicationToDelete.id);
     try {
+      // If the application had a slot booked, decrement that slot's current_capacity
+      if (applicationToDelete.slot_id) {
+        try {
+          const { data: slotData, error: slotError } = await supabase
+            .from('slots')
+            .select('id, current_capacity')
+            .eq('id', applicationToDelete.slot_id)
+            .single();
+
+          if (!slotError && slotData) {
+            const newCapacity = Math.max((slotData.current_capacity || 0) - 1, 0);
+            await supabase
+              .from('slots')
+              .update({ current_capacity: newCapacity })
+              .eq('id', slotData.id);
+          }
+        } catch (slotUpdateError) {
+          console.error('Error updating slot capacity on application delete:', slotUpdateError);
+          // Do not block application delete if capacity update fails
+        }
+      }
+
       const { error } = await supabase
         .from('applications')
         .delete()

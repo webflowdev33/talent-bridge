@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { Briefcase } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -8,9 +7,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-primary">
-                <Briefcase className="h-5 w-5 text-primary-foreground" />
-              </div>
+              <img src="/logo.svg" alt="Testrow Logo" className="h-9 w-9" />
               <span className="font-display text-xl font-bold text-foreground">
                 Testrow
               </span>
@@ -52,26 +49,7 @@ export function Footer() {
             </ul>
           </div>
 
-          <div>
-            <h3 className="font-display font-semibold mb-4">Support</h3>
-            <ul className="space-y-2">
-              <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Help Center
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Privacy Policy
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Terms of Service
-                </a>
-              </li>
-            </ul>
-          </div>
+          
         </div>
 
         <div className="mt-8 pt-8 border-t border-border">

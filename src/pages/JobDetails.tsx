@@ -336,12 +336,16 @@ export default function JobDetails() {
               ) : (
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div>
-                    <p className="font-semibold mb-1">Ready to Apply?</p>
+                    <p className="font-semibold mb-1 text-foreground">Ready to Apply?</p>
                     <p className="text-sm text-muted-foreground">
                       Submit your application and select a test slot
                     </p>
                   </div>
-                  <Button onClick={handleApply} disabled={applying} variant="hero">
+                  <Button 
+                    onClick={handleApply} 
+                    disabled={applying} 
+                    className="bg-primary text-white hover:bg-primary/90 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 min-w-[140px]"
+                  >
                     {applying ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : (

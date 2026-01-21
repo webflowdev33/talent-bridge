@@ -69,22 +69,22 @@ export default function Jobs() {
       <Header />
       
       {/* Hero Section */}
-      <section className="bg-gradient-hero py-16">
+      <section className="bg-primary py-20">
         <div className="container">
-          <div className="mx-auto max-w-2xl text-center">
-            <h1 className="font-display text-4xl font-bold text-white mb-4">
+          <div className="mx-auto max-w-3xl text-center">
+            <h1 className="font-display text-5xl font-bold text-white mb-6">
               Find Your Dream Job
             </h1>
-            <p className="text-white/80 mb-8">
+            <p className="text-white/90 mb-10 text-lg">
               Explore our open positions and take the first step towards your new career.
             </p>
-            <div className="relative max-w-md mx-auto">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <div className="relative max-w-2xl mx-auto">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
               <Input
                 placeholder="Search jobs by title, department, or location..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-12 bg-white/95 border-0 shadow-lg"
+                className="pl-12 h-14 bg-white border-0 shadow-xl text-base focus:ring-2 focus:ring-white/50"
               />
             </div>
           </div>
@@ -92,17 +92,19 @@ export default function Jobs() {
       </section>
 
       {/* Jobs List */}
-      <section className="py-16 bg-background flex-1">
+      <section className="py-20 bg-secondary flex-1">
         <div className="container">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
             </div>
           ) : filteredJobs.length === 0 ? (
             <div className="text-center py-20">
-              <Briefcase className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="font-display text-xl font-semibold mb-2">No Jobs Found</h3>
-              <p className="text-muted-foreground">
+              <div className="inline-flex items-center justify-center w-20 h-20 mb-6">
+                <img src="/logo.svg" alt="Testrow Logo" className="h-20 w-20" />
+              </div>
+              <h3 className="font-display text-2xl font-bold text-foreground mb-3">No Jobs Found</h3>
+              <p className="text-muted-foreground text-lg">
                 {searchQuery 
                   ? 'Try adjusting your search terms'
                   : 'Check back later for new opportunities'}
@@ -110,60 +112,63 @@ export default function Jobs() {
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between mb-8">
-                <p className="text-muted-foreground">
-                  Showing <span className="font-semibold text-foreground">{filteredJobs.length}</span> open positions
+              <div className="flex items-center justify-between mb-10">
+                <p className="text-foreground text-lg">
+                  Showing <span className="font-bold text-primary">{filteredJobs.length}</span> open position{filteredJobs.length !== 1 ? 's' : ''}
                 </p>
               </div>
               <div className="grid gap-6">
                 {filteredJobs.map((job) => (
-                  <Card key={job.id} className="hover:shadow-lg transition-shadow duration-300">
-                    <CardHeader>
+                  <Card 
+                    key={job.id} 
+                    className="border border-border shadow-md hover:shadow-xl transition-all duration-300 bg-background hover:border-primary/30"
+                  >
+                    <CardHeader className="pb-4">
                       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                        <div>
-                          <CardTitle className="font-display text-xl mb-2">
+                        <div className="flex-1">
+                          <CardTitle className="font-display text-2xl font-bold text-foreground mb-3">
                             {job.title}
                           </CardTitle>
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-4 text-sm">
                             {job.department && (
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-2 text-muted-foreground">
                                 <Building2 className="h-4 w-4" />
-                                {job.department}
+                                <span className="font-medium">{job.department}</span>
                               </div>
                             )}
                             {job.location && (
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-2 text-muted-foreground">
                                 <MapPin className="h-4 w-4" />
-                                {job.location}
+                                <span className="font-medium">{job.location}</span>
                               </div>
                             )}
                             {job.salary_range && (
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-2 text-muted-foreground">
                                 <DollarSign className="h-4 w-4" />
-                                {job.salary_range}
+                                <span className="font-medium">{job.salary_range}</span>
                               </div>
                             )}
                             {job.total_rounds && (
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-2 text-muted-foreground">
                                 <Clock className="h-4 w-4" />
-                                {job.total_rounds} Round{job.total_rounds > 1 ? 's' : ''}
+                                <span className="font-medium">{job.total_rounds} Round{job.total_rounds > 1 ? 's' : ''}</span>
                               </div>
                             )}
                           </div>
                         </div>
-                        <Badge variant="secondary" className="shrink-0">
+                        <Badge className="shrink-0 bg-primary w-fit text-center text-white px-3 py-1.5 font-semibold">
                           Active
                         </Badge>
                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-0">
                       {job.description && (
-                        <CardDescription className="mb-4 line-clamp-2">
+                        <CardDescription className="mb-6 line-clamp-2 text-base leading-relaxed">
                           {job.description}
                         </CardDescription>
                       )}
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <p className="text-sm text-muted-foreground">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-border">
+                        <p className="text-sm text-muted-foreground font-medium">
                           Posted {new Date(job.created_at).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
@@ -171,14 +176,21 @@ export default function Jobs() {
                           })}
                         </p>
                         {user ? (
-                          <Button asChild variant="hero">
+                          <Button 
+                            asChild 
+                            className="bg-primary text-white hover:bg-primary/90 font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                          >
                             <Link to={`/jobs/${job.id}`}>
                               Apply Now
                               <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
                           </Button>
                         ) : (
-                          <Button asChild>
+                          <Button 
+                            asChild 
+                            variant="outline"
+                            className="border-2 border-primary text-primary hover:bg-primary hover:text-white font-semibold transition-all duration-300"
+                          >
                             <Link to="/auth?tab=signup">
                               Sign Up to Apply
                               <ArrowRight className="ml-2 h-4 w-4" />

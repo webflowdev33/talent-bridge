@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { 
@@ -63,18 +64,19 @@ interface Profile {
   email: string | null;
   profile_completed: boolean;
   resume_url: string | null;
+  avatar_url: string | null;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
-  applied: { label: 'Applied', color: 'bg-blue-100 text-blue-800', icon: Clock },
-  slot_selected: { label: 'Slot Selected', color: 'bg-purple-100 text-purple-800', icon: Clock },
-  approved: { label: 'Approved', color: 'bg-cyan-100 text-cyan-800', icon: CheckCircle2 },
-  test_enabled: { label: 'Test Enabled', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
-  test_taken: { label: 'Test Taken', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+  applied: { label: 'Applied', color: 'bg-secondary text-foreground border border-border', icon: Clock },
+  slot_selected: { label: 'Slot Selected', color: 'bg-secondary text-foreground border border-border', icon: Clock },
+  approved: { label: 'Approved', color: 'bg-secondary text-foreground border border-border', icon: CheckCircle2 },
+  test_enabled: { label: 'Test Enabled', color: 'bg-primary text-white', icon: CheckCircle2 },
+  test_taken: { label: 'Test Taken', color: 'bg-secondary text-foreground border border-border', icon: Clock },
   passed: { label: 'Passed', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
   failed: { label: 'Failed', color: 'bg-red-100 text-red-800', icon: XCircle },
-  next_round: { label: 'Next Round', color: 'bg-indigo-100 text-indigo-800', icon: ArrowRight },
-  selected: { label: 'Selected', color: 'bg-emerald-100 text-emerald-800', icon: CheckCircle2 },
+  next_round: { label: 'Next Round', color: 'bg-secondary text-foreground border border-border', icon: ArrowRight },
+  selected: { label: 'Selected', color: 'bg-primary text-white', icon: CheckCircle2 },
   rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800', icon: XCircle },
 };
 
@@ -104,7 +106,7 @@ export default function Dashboard() {
       // Fetch profile
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('full_name, email, profile_completed, resume_url')
+        .select('full_name, email, profile_completed, resume_url, avatar_url')
         .eq('user_id', user!.id)
         .single();
 
@@ -229,6 +231,36 @@ export default function Dashboard() {
     return roundInfo?.name || `Round ${currentRound}`;
   };
 
+  const [avatarPublicUrl, setAvatarPublicUrl] = useState<string | null>(null);
+
+  // Generate signed URL for dashboard avatar
+  useEffect(() => {
+    const generateSignedUrl = async () => {
+      if (!profile?.avatar_url) {
+        setAvatarPublicUrl(null);
+        return;
+      }
+      try {
+        const { data, error } = await supabase.storage
+          .from('avatars')
+          .createSignedUrl(profile.avatar_url, 60 * 60); // 1 hour
+
+        if (error) {
+          console.error('Error creating signed avatar URL (dashboard):', error);
+          setAvatarPublicUrl(null);
+          return;
+        }
+
+        setAvatarPublicUrl(data?.signedUrl ?? null);
+      } catch (err) {
+        console.error('Error creating signed avatar URL (dashboard):', err);
+        setAvatarPublicUrl(null);
+      }
+    };
+
+    generateSignedUrl();
+  }, [profile?.avatar_url]);
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -244,146 +276,116 @@ export default function Dashboard() {
     (profile.profile_completed ? 25 : 0) : 0;
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/30">
+    <div className="min-h-screen flex flex-col bg-secondary">
       <Header />
       
-      <main className="flex-1 py-8">
-        <div className="container">
-          <div className="mb-8">
-            <h1 className="font-display text-3xl font-bold mb-2">
-              Welcome back, {profile?.full_name || 'Candidate'}
-            </h1>
-            <p className="text-muted-foreground">
-              Track your applications and test progress here.
-            </p>
+      <main className="flex-1 bg-secondary">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+          {/* Welcome Section with Profile Summary */}
+          <div className="mb-4 sm:mb-6 lg:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border border-border bg-secondary">
+                <AvatarImage src={avatarPublicUrl || undefined} alt={profile?.full_name || 'User avatar'} />
+                <AvatarFallback className="text-xs sm:text-sm font-semibold">
+                  {profile?.full_name
+                    ? profile.full_name
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                        .toUpperCase()
+                    : 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-0.5 sm:mb-1 text-foreground">
+                  Welcome back, {profile?.full_name || 'Candidate'}
+                </h1>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  {profile?.email || 'Track your applications and test progress here.'}
+                </p>
+              </div>
+            </div>
+            <Button
+              asChild
+              variant="outline"
+              className="border border-border text-sm sm:text-base w-full sm:w-auto"
+            >
+              <Link to="/profile">View Profile</Link>
+            </Button>
           </div>
 
-          {/* Profile Completion Card */}
+          {/* Profile Completion Alert */}
           {!profile?.profile_completed && (
-            <Card className="mb-8 border-warning/50 bg-warning/5">
-              <CardHeader>
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-full bg-warning/20 flex items-center justify-center">
-                    <AlertCircle className="h-6 w-6 text-warning" />
+            <div className="mb-4 sm:mb-6 lg:mb-8 bg-white rounded-lg border-l-4 border-primary p-4 sm:p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <div className="flex items-start gap-3 flex-1">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                   </div>
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">Complete Your Profile</CardTitle>
-                    <CardDescription>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground mb-1">Complete Your Profile</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-3">
                       You need to complete your profile before applying for jobs.
-                    </CardDescription>
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs sm:text-sm">
+                        <span className="text-foreground">Profile completion</span>
+                        <span className="font-medium text-foreground">{profileProgress}%</span>
+                      </div>
+                      <Progress value={profileProgress} className="h-1.5 sm:h-2" />
+                    </div>
                   </div>
-                  <Button asChild>
-                    <Link to="/profile">
-                      Complete Profile
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Profile completion</span>
-                    <span className="font-medium">{profileProgress}%</span>
-                  </div>
-                  <Progress value={profileProgress} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
+                <Button
+                  asChild
+                  className="bg-primary text-white hover:bg-primary/90 font-semibold text-sm sm:text-base w-full sm:w-auto shrink-0"
+                >
+                  <Link to="/profile">
+                    Complete Profile
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
           )}
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Briefcase className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{applications.length}</p>
-                    <p className="text-sm text-muted-foreground">Applications</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">
-                      {applications.filter(a => a.status === 'passed' || a.status === 'selected').length}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Passed</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-lg bg-yellow-100 flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-yellow-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">
-                      {applications.filter(a => a.test_enabled && a.status !== 'test_taken').length}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Pending Tests</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">
-                      {profile?.resume_url ? 1 : 0}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Resume</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Applications List */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+          {/* Applications Section */}
+          <div className="bg-white rounded-lg shadow-sm border border-border">
+            {/* Section Header */}
+            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-border">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                 <div>
-                  <CardTitle>Your Applications</CardTitle>
-                  <CardDescription>Track the status of your job applications</CardDescription>
+                  <h2 className="text-lg sm:text-xl font-bold text-foreground mb-1">Your Applications</h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Track the status of your job applications</p>
                 </div>
-                <Button asChild variant="outline">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="border-2 border-primary text-primary hover:bg-primary hover:text-white font-semibold text-sm sm:text-base w-full sm:w-auto"
+                >
                   <Link to="/jobs">
                     Browse Jobs
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent>
+            </div>
+
+            {/* Applications Content */}
+            <div className="p-4 sm:p-6 lg:p-8">
               {applications.length === 0 ? (
-                <div className="text-center py-12">
-                  <Briefcase className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                  <h3 className="font-semibold mb-2">No Applications Yet</h3>
-                  <p className="text-muted-foreground mb-4">
+                <div className="text-center py-8 sm:py-12">
+                  <img src="/logo.svg" alt="Testrow Logo" className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
+                  <h3 className="text-base sm:text-lg font-semibold mb-2 text-foreground">No Applications Yet</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6">
                     Start by browsing available job openings.
                   </p>
-                  <Button asChild>
+                  <Button asChild className="bg-primary text-white hover:bg-primary/90 font-semibold text-sm sm:text-base">
                     <Link to="/jobs">Browse Jobs</Link>
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   {applications.map((app) => {
                     const status = statusConfig[app.status] || statusConfig.applied;
                     const StatusIcon = status.icon;
@@ -391,43 +393,55 @@ export default function Dashboard() {
                     const clearedRounds = roundBreakdown.filter(r => r.status === 'passed').length;
                     
                     return (
-                      <div key={app.id} className="space-y-4">
-                        <div 
-                          className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg border bg-card hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex items-start gap-4 mb-4 md:mb-0">
-                            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                              <Briefcase className="h-5 w-5 text-primary" />
+                      <div key={app.id} className="bg-white border-2 border-border rounded-lg p-4 sm:p-6 hover:shadow-md transition-all duration-300 hover:border-primary/30">
+                        {/* Application Header */}
+                        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-border">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
+                              <Briefcase className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                             </div>
-                          <div>
-                            <h4 className="font-semibold">{app.jobs.title}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {app.jobs.department} • {getCurrentRoundName(app.jobs.id, app.current_round)} of {app.jobs.total_rounds || 1}
-                            </p>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-foreground mb-1 sm:mb-2 break-words">{app.jobs.title}</h3>
+                              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground mb-1 sm:mb-2">
+                                {app.jobs.department && (
+                                  <>
+                                    <span className="font-medium">{app.jobs.department}</span>
+                                    <span>•</span>
+                                  </>
+                                )}
+                                <span>{getCurrentRoundName(app.jobs.id, app.current_round)} of {app.jobs.total_rounds || 1}</span>
+                              </div>
                               {app.slots && (
-                                <p className="text-sm text-muted-foreground mt-1">
+                                <p className="text-xs text-muted-foreground">
                                   Scheduled: {new Date(app.slots.slot_date).toLocaleDateString()} at {app.slots.start_time}
                                 </p>
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <Badge className={status.color}>
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 shrink-0">
+                            <Badge className={`w-fit ${status.color} font-semibold text-xs`}>
                               <StatusIcon className="h-3 w-3 mr-1" />
                               {status.label}
                             </Badge>
-                            {/* Show Select Slot if applied but no slot selected */}
                             {app.status === 'applied' && !app.slots && (
-                              <Button size="sm" asChild variant="outline">
+                              <Button
+                                size="sm"
+                                asChild
+                                variant="outline"
+                                className="border-2 border-primary text-primary hover:bg-primary hover:text-white font-semibold text-xs px-3 py-1.5 h-auto w-full sm:w-auto"
+                              >
                                 <Link to={`/select-slot/${app.id}`}>
                                   Select Slot
                                 </Link>
                               </Button>
                             )}
-                            {/* Show Start Test if test is enabled */}
                             {app.test_enabled && app.status !== 'test_taken' && app.status !== 'passed' && app.status !== 'failed' && (
-                              <Button size="sm" asChild>
-                                <Link to={`/test/${app.id}`}>
+                              <Button
+                                size="sm"
+                                asChild
+                                className="bg-primary text-white hover:bg-primary/90 font-semibold text-xs px-3 py-1.5 h-auto shadow-sm hover:shadow-md transition-all w-full sm:w-auto"
+                              >
+                                <Link to={`/test-countdown/${app.id}`}>
                                   Start Test
                                 </Link>
                               </Button>
@@ -437,87 +451,81 @@ export default function Dashboard() {
 
                         {/* Congratulations Message for Selected Candidates */}
                         {app.status === 'selected' ? (
-                          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800">
-                            <CardContent className="pt-6">
-                              <div className="flex flex-col items-center text-center py-6">
-                                <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
-                                  <Trophy className="h-8 w-8 text-green-600 dark:text-green-400" />
-                                </div>
-                                <h3 className="text-2xl font-bold text-green-900 dark:text-green-100 mb-2">
-                                  Congratulations! 🎉
-                                </h3>
-                                <p className="text-green-700 dark:text-green-300 mb-1">
-                                  You have been selected for <strong>{app.jobs.title}</strong>
-                                </p>
-                                <p className="text-sm text-green-600 dark:text-green-400">
-                                  We'll be in touch with you shortly regarding the next steps.
-                                </p>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <div className="flex flex-col items-center text-center py-6 sm:py-8 px-4 bg-primary/10 rounded-lg border-2 border-primary/30">
+                            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-primary/20 flex items-center justify-center mb-3 border-2 border-primary/30">
+                              <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                            </div>
+                            <h3 className="text-lg sm:text-xl font-bold text-foreground mb-1 sm:mb-2">
+                              Congratulations! 🎉
+                            </h3>
+                            <p className="text-xs sm:text-sm text-foreground mb-1">
+                              You have been selected for <strong>{app.jobs.title}</strong>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              We'll be in touch with you shortly regarding the next steps.
+                            </p>
+                          </div>
                         ) : (
                           /* Round Breakdown */
                           app.jobs.total_rounds && app.jobs.total_rounds > 1 && (
-                            <Card className="bg-muted/50">
-                              <CardHeader className="pb-3">
+                            <div className="bg-secondary/50 rounded-lg p-3 sm:p-4 border border-border">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-3">
                                 <div className="flex items-center gap-2">
                                   <Target className="h-4 w-4 text-primary" />
-                                  <CardTitle className="text-base">Round Progress</CardTitle>
-                                  <Badge variant="outline" className="ml-auto">
-                                    {clearedRounds} of {app.jobs.total_rounds} cleared
-                                  </Badge>
+                                  <h4 className="text-xs sm:text-sm font-semibold text-foreground">Round Progress</h4>
                                 </div>
-                              </CardHeader>
-                              <CardContent>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                  {roundBreakdown.map((round) => (
-                                    <div
-                                      key={round.round}
-                                      className={`p-3 rounded-lg border-2 transition-all ${
-                                        round.status === 'passed'
-                                          ? 'border-green-500 bg-green-50 dark:bg-green-950/20'
-                                          : round.status === 'failed'
-                                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                                          : 'border-muted bg-muted/50'
-                                      }`}
-                                    >
-                                      <div className="flex items-center justify-between mb-2">
-                                        <div className="flex-1">
-                                          <span className="text-sm font-medium">{round.name}</span>
-                                          {round.description && (
-                                            <p className="text-xs text-muted-foreground mt-0.5">{round.description}</p>
-                                          )}
-                                        </div>
-                                        {round.status === 'passed' && (
-                                          <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-                                        )}
-                                        {round.status === 'failed' && (
-                                          <XCircle className="h-4 w-4 text-red-600 shrink-0" />
-                                        )}
-                                        {round.status === 'pending' && (
-                                          <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                                <Badge variant="outline" className="text-xs w-fit bg-white">
+                                  {clearedRounds} of {app.jobs.total_rounds} cleared
+                                </Badge>
+                              </div>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+                                {roundBreakdown.map((round) => (
+                                  <div
+                                    key={round.round}
+                                    className={`p-2 sm:p-3 rounded-lg border-2 transition-all ${
+                                      round.status === 'passed'
+                                        ? 'border-green-500 bg-green-50'
+                                        : round.status === 'failed'
+                                        ? 'border-red-500 bg-red-50'
+                                        : 'border-border bg-white'
+                                    }`}
+                                  >
+                                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                                      <div className="flex-1 min-w-0">
+                                        <span className="text-xs font-semibold text-foreground block truncate">{round.name}</span>
+                                        {round.description && (
+                                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{round.description}</p>
                                         )}
                                       </div>
-                                      {round.status === 'passed' && round.score !== null && (
-                                        <div className="text-xs text-muted-foreground">
-                                          Score: {round.score}/{round.total}
-                                        </div>
+                                      {round.status === 'passed' && (
+                                        <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0 mt-0.5" />
                                       )}
-                                      {round.status === 'failed' && round.score !== null && (
-                                        <div className="text-xs text-muted-foreground">
-                                          Score: {round.score}/{round.total}
-                                        </div>
+                                      {round.status === 'failed' && (
+                                        <XCircle className="h-3.5 w-3.5 text-red-600 shrink-0 mt-0.5" />
                                       )}
                                       {round.status === 'pending' && (
-                                        <div className="text-xs text-muted-foreground">
-                                          Not attempted
-                                        </div>
+                                        <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
                                       )}
                                     </div>
-                                  ))}
-                                </div>
-                              </CardContent>
-                            </Card>
+                                    {round.status === 'passed' && round.score !== null && (
+                                      <div className="text-xs text-muted-foreground font-medium">
+                                        {round.score}/{round.total}
+                                      </div>
+                                    )}
+                                    {round.status === 'failed' && round.score !== null && (
+                                      <div className="text-xs text-muted-foreground font-medium">
+                                        {round.score}/{round.total}
+                                      </div>
+                                    )}
+                                    {round.status === 'pending' && (
+                                      <div className="text-xs text-muted-foreground">
+                                        Pending
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           )
                         )}
                       </div>
@@ -525,8 +533,8 @@ export default function Dashboard() {
                   })}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </main>
 

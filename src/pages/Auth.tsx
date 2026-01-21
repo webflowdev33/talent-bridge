@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Briefcase, Mail, Lock, ArrowLeft, Loader2 } from 'lucide-react';
+import { Mail, Lock, ArrowLeft, Loader2 } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -131,45 +131,49 @@ export default function Auth() {
 
   if (showForgotPassword) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted to-background p-4">
-        <Card className="w-full max-w-md shadow-xl animate-fade-in">
-          <CardHeader className="space-y-4 text-center">
-            <Link to="/" className="flex items-center justify-center gap-2">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-primary">
-                <Briefcase className="h-6 w-6 text-primary-foreground" />
+      <div className="min-h-screen flex items-center justify-center bg-secondary p-3 sm:p-4">
+        <Card className="w-full max-w-md shadow-2xl border border-border animate-fade-in-up">
+          <CardHeader className="space-y-3 sm:space-y-4 text-center pb-5 sm:pb-6 px-1">
+            <Link to="/" className="flex items-center justify-center gap-2 group">
+              <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center transition-transform duration-300 group-hover:scale-110">
+                <img src="/logo.svg" alt="Testrow Logo" className="h-12 w-12 sm:h-14 sm:w-14" />
               </div>
             </Link>
-            <CardTitle className="font-display text-2xl">Reset Password</CardTitle>
-            <CardDescription>
+            <CardTitle className="font-display text-2xl sm:text-3xl font-bold text-foreground">Reset Password</CardTitle>
+            <CardDescription className="text-sm sm:text-base">
               Enter your email address and we'll send you a link to reset your password.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={forgotPasswordForm.handleSubmit(handleForgotPassword)} className="space-y-4">
+            <form onSubmit={forgotPasswordForm.handleSubmit(handleForgotPassword)} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="forgot-email">Email</Label>
+                <Label htmlFor="forgot-email" className="text-sm font-semibold">Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
                   <Input
                     id="forgot-email"
                     type="email"
                     placeholder="name@example.com"
-                    className="pl-10"
+                    className="pl-11 h-11 sm:h-12 border-2 focus:border-primary transition-colors"
                     {...forgotPasswordForm.register('email')}
                   />
                 </div>
                 {forgotPasswordForm.formState.errors.email && (
-                  <p className="text-sm text-destructive">{forgotPasswordForm.formState.errors.email.message}</p>
+                  <p className="text-sm text-destructive font-medium">{forgotPasswordForm.formState.errors.email.message}</p>
                 )}
               </div>
-              <Button type="submit" className="w-full" variant="hero" disabled={isLoading}>
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              <Button 
+                type="submit" 
+                className="w-full h-11 sm:h-12 bg-primary text-white hover:bg-primary/90 font-semibold shadow-lg hover:shadow-xl transition-all duration-300" 
+                disabled={isLoading}
+              >
+                {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
                 Send Reset Link
               </Button>
               <Button
                 type="button"
                 variant="ghost"
-                className="w-full"
+                className="w-full h-11 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 onClick={() => setShowForgotPassword(false)}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -183,68 +187,82 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted to-background p-4">
-      <Card className="w-full max-w-md shadow-xl animate-fade-in">
-        <CardHeader className="space-y-4 text-center">
-          <Link to="/" className="flex items-center justify-center gap-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-primary">
-              <Briefcase className="h-6 w-6 text-primary-foreground" />
+    <div className="min-h-screen flex items-center justify-center bg-secondary p-3 sm:p-4">
+      <Card className="w-full max-w-md shadow-2xl border border-border animate-fade-in-up">
+        <CardHeader className="space-y-3 sm:space-y-4 text-center pb-5 sm:pb-6 px-1">
+          <Link to="/" className="flex items-center justify-center gap-2 group">
+            <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center transition-transform duration-300 group-hover:scale-110">
+              <img src="/logo.svg" alt="Testrow Logo" className="h-12 w-12 sm:h-14 sm:w-14" />
             </div>
           </Link>
-          <CardTitle className="font-display text-2xl">Welcome to Testrow</CardTitle>
-          <CardDescription>
+          <CardTitle className="font-display text-2xl sm:text-3xl font-bold text-foreground">Welcome to Testrow</CardTitle>
+          <CardDescription className="text-sm sm:text-base">
             Sign in to your account or create a new one to get started.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-6 sm:mb-8 h-11 sm:h-12 bg-muted">
+              <TabsTrigger 
+                value="login" 
+                className="data-[state=active]:bg-primary data-[state=active]:text-white font-semibold transition-all duration-300"
+              >
+                Sign In
+              </TabsTrigger>
+              <TabsTrigger 
+                value="signup"
+                className="data-[state=active]:bg-primary data-[state=active]:text-white font-semibold transition-all duration-300"
+              >
+                Sign Up
+              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="login">
-              <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+            <TabsContent value="login" className="space-y-5">
+              <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
+                  <Label htmlFor="login-email" className="text-sm font-semibold">Email</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Mail className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="login-email"
                       type="email"
                       placeholder="name@example.com"
-                      className="pl-10"
+                      className="pl-11 h-11 sm:h-12 border-2 focus:border-primary transition-colors"
                       {...loginForm.register('email')}
                     />
                   </div>
                   {loginForm.formState.errors.email && (
-                    <p className="text-sm text-destructive">{loginForm.formState.errors.email.message}</p>
+                    <p className="text-sm text-destructive font-medium">{loginForm.formState.errors.email.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
+                  <Label htmlFor="login-password" className="text-sm font-semibold">Password</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Lock className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="login-password"
                       type="password"
                       placeholder="••••••••"
-                      className="pl-10"
+                      className="pl-11 h-11 sm:h-12 border-2 focus:border-primary transition-colors"
                       {...loginForm.register('password')}
                     />
                   </div>
                   {loginForm.formState.errors.password && (
-                    <p className="text-sm text-destructive">{loginForm.formState.errors.password.message}</p>
+                    <p className="text-sm text-destructive font-medium">{loginForm.formState.errors.password.message}</p>
                   )}
                 </div>
-                <Button type="submit" className="w-full" variant="hero" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                <Button 
+                  type="submit" 
+                  className="w-full h-11 sm:h-12 bg-primary text-white hover:bg-primary/90 font-semibold shadow-lg hover:shadow-xl transition-all duration-300" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
                   Sign In
                 </Button>
                 <Button
                   type="button"
                   variant="link"
-                  className="w-full"
+                  className="w-full text-primary hover:text-primary/80 font-medium transition-colors"
                   onClick={() => setShowForgotPassword(true)}
                 >
                   Forgot your password?
@@ -252,58 +270,62 @@ export default function Auth() {
               </form>
             </TabsContent>
 
-            <TabsContent value="signup">
-              <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4">
+            <TabsContent value="signup" className="space-y-5">
+              <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email" className="text-sm font-semibold">Email</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Mail className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="signup-email"
                       type="email"
                       placeholder="name@example.com"
-                      className="pl-10"
+                      className="pl-11 h-11 sm:h-12 border-2 focus:border-primary transition-colors"
                       {...signupForm.register('email')}
                     />
                   </div>
                   {signupForm.formState.errors.email && (
-                    <p className="text-sm text-destructive">{signupForm.formState.errors.email.message}</p>
+                    <p className="text-sm text-destructive font-medium">{signupForm.formState.errors.email.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password" className="text-sm font-semibold">Password</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Lock className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="signup-password"
                       type="password"
                       placeholder="••••••••"
-                      className="pl-10"
+                      className="pl-11 h-11 sm:h-12 border-2 focus:border-primary transition-colors"
                       {...signupForm.register('password')}
                     />
                   </div>
                   {signupForm.formState.errors.password && (
-                    <p className="text-sm text-destructive">{signupForm.formState.errors.password.message}</p>
+                    <p className="text-sm text-destructive font-medium">{signupForm.formState.errors.password.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Label htmlFor="confirm-password" className="text-sm font-semibold">Confirm Password</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Lock className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="confirm-password"
                       type="password"
                       placeholder="••••••••"
-                      className="pl-10"
+                      className="pl-11 h-11 sm:h-12 border-2 focus:border-primary transition-colors"
                       {...signupForm.register('confirmPassword')}
                     />
                   </div>
                   {signupForm.formState.errors.confirmPassword && (
-                    <p className="text-sm text-destructive">{signupForm.formState.errors.confirmPassword.message}</p>
+                    <p className="text-sm text-destructive font-medium">{signupForm.formState.errors.confirmPassword.message}</p>
                   )}
                 </div>
-                <Button type="submit" className="w-full" variant="hero" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                <Button 
+                  type="submit" 
+                  className="w-full h-11 sm:h-12 bg-primary text-white hover:bg-primary/90 font-semibold shadow-lg hover:shadow-xl transition-all duration-300" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
                   Create Account
                 </Button>
               </form>

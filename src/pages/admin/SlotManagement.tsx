@@ -81,7 +81,34 @@ export default function SlotManagement() {
         .order('start_time', { ascending: true });
 
       if (slotsError) throw slotsError;
-      setSlots(slotsData || []);
+
+      const rawSlots = slotsData || [];
+
+      // Compute current bookings per slot from applications so counts stay in sync
+      const slotIds = rawSlots.map((s) => s.id);
+      let bookedCounts: Record<string, number> = {};
+
+      if (slotIds.length > 0) {
+        const { data: appsForSlots, error: appsError } = await supabase
+          .from('applications')
+          .select('slot_id')
+          .in('slot_id', slotIds);
+
+        if (appsError) throw appsError;
+
+        bookedCounts = (appsForSlots || []).reduce((acc: Record<string, number>, app: any) => {
+          if (!app.slot_id) return acc;
+          acc[app.slot_id] = (acc[app.slot_id] || 0) + 1;
+          return acc;
+        }, {});
+      }
+
+      const slotsWithCounts: Slot[] = rawSlots.map((slot: any) => ({
+        ...slot,
+        current_capacity: bookedCounts[slot.id] ?? 0,
+      }));
+
+      setSlots(slotsWithCounts);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -94,9 +121,24 @@ export default function SlotManagement() {
   };
 
   const handleOpenDialog = () => {
+    // Creating a new slot
+    setSelectedSlot(null);
     setFormData({
       ...defaultFormData,
       slot_date: format(new Date(), 'yyyy-MM-dd'),
+    });
+    setDialogOpen(true);
+  };
+
+  const handleEditSlot = (slot: Slot) => {
+    // Editing an existing slot
+    setSelectedSlot(slot);
+    setFormData({
+      slot_date: slot.slot_date,
+      start_time: slot.start_time,
+      end_time: slot.end_time,
+      max_capacity: slot.max_capacity || 50,
+      is_enabled: Boolean(slot.is_enabled),
     });
     setDialogOpen(true);
   };
@@ -106,19 +148,39 @@ export default function SlotManagement() {
     setSubmitting(true);
 
     try {
-      const { error } = await supabase.from('slots').insert({
-        job_id: null,
-        slot_date: formData.slot_date,
-        start_time: formData.start_time,
-        end_time: formData.end_time,
-        max_capacity: formData.max_capacity,
-        is_enabled: formData.is_enabled,
-        current_capacity: 0,
-      });
+      if (selectedSlot) {
+        // Update existing slot (do not touch current_capacity here)
+        const { error } = await supabase
+          .from('slots')
+          .update({
+            slot_date: formData.slot_date,
+            start_time: formData.start_time,
+            end_time: formData.end_time,
+            max_capacity: formData.max_capacity,
+            is_enabled: formData.is_enabled,
+          })
+          .eq('id', selectedSlot.id);
 
-      if (error) throw error;
-      toast({ title: 'Success', description: 'Slot created successfully' });
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Slot updated successfully' });
+      } else {
+        // Create new slot
+        const { error } = await supabase.from('slots').insert({
+          job_id: null,
+          slot_date: formData.slot_date,
+          start_time: formData.start_time,
+          end_time: formData.end_time,
+          max_capacity: formData.max_capacity,
+          is_enabled: formData.is_enabled,
+          current_capacity: 0,
+        });
+
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Slot created successfully' });
+      }
+
       setDialogOpen(false);
+      setSelectedSlot(null);
       fetchData();
     } catch (error: any) {
       toast({
@@ -194,29 +256,44 @@ export default function SlotManagement() {
     <div className="min-h-screen flex flex-col bg-muted/30">
       <Header />
       
-      <main className="flex-1 container py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Slot Management</h1>
-            <p className="text-muted-foreground">Create and manage test time slots</p>
-          </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Slot Management</h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Create and manage test time slots
+              </p>
+            </div>
+            <Dialog
+            open={dialogOpen}
+            onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) {
+                setSelectedSlot(null);
+                setFormData(defaultFormData);
+              }
+            }}
+          >
             <DialogTrigger asChild>
-              <Button onClick={handleOpenDialog}>
+              <Button onClick={handleOpenDialog} className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" /> Create Slot
               </Button>
             </DialogTrigger>
             <DialogContent>
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
-                  <DialogTitle>Create New Slot</DialogTitle>
-                  <DialogDescription>
-                    Create a universal time slot available for all job applicants
+                  <DialogTitle className="text-lg sm:text-xl">
+                    {selectedSlot ? 'Edit Slot' : 'Create New Slot'}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs sm:text-sm">
+                    {selectedSlot
+                      ? 'Update the details of this time slot.'
+                      : 'Create a universal time slot available for all job applicants.'}
                   </DialogDescription>
                 </DialogHeader>
                 
                 <div className="grid gap-4 py-4">
-
                   <div className="space-y-2">
                     <Label htmlFor="slot_date">Date *</Label>
                     <Input
@@ -228,7 +305,7 @@ export default function SlotManagement() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="start_time">Start Time *</Label>
                       <Input
@@ -273,98 +350,146 @@ export default function SlotManagement() {
                   </div>
                 </div>
 
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
+                    className="w-full sm:w-auto"
+                  >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={submitting}>
+                  <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                     {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create Slot
+                    {selectedSlot ? 'Save Changes' : 'Create Slot'}
                   </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
-          </Dialog>
-        </div>
+            </Dialog>
+          </div>
 
-
-        <Card>
+          <Card className="mt-4 sm:mt-6">
           <CardHeader>
-            <CardTitle>All Slots</CardTitle>
-            <CardDescription>{slots.length} slot(s) created</CardDescription>
+            <CardTitle className="text-lg sm:text-xl">All Slots</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              {slots.length} slot{slots.length !== 1 ? 's' : ''} created
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {slots.length === 0 ? (
-              <div className="text-center py-8">
-                <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No slots created yet</p>
-                <Button className="mt-4" onClick={handleOpenDialog}>
+              <div className="text-center py-8 sm:py-10">
+                <Calendar className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mb-4" />
+                <p className="text-sm sm:text-base text-muted-foreground">No slots created yet</p>
+                <Button className="mt-4 w-full sm:w-auto" onClick={handleOpenDialog}>
                   <Plus className="mr-2 h-4 w-4" /> Create Your First Slot
                 </Button>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Capacity</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {slots.map((slot) => (
-                    <TableRow key={slot.id}>
-                      <TableCell>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {format(new Date(slot.slot_date), 'MMM dd, yyyy')}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {slot.start_time} - {slot.end_time}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          {slot.current_capacity || 0} / {slot.max_capacity || 50}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={slot.is_enabled ? 'default' : 'secondary'}>
-                          {slot.is_enabled ? 'Enabled' : 'Disabled'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Switch
-                            checked={slot.is_enabled ?? false}
-                            onCheckedChange={() => toggleSlotStatus(slot)}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => {
-                              setSelectedSlot(slot);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="w-full overflow-x-auto">
+                <Table className="min-w-[700px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Capacity</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {slots.map((slot) => {
+                      const max = slot.max_capacity || 50;
+                      const current = slot.current_capacity || 0;
+                      const remaining = Math.max(max - current, 0);
+                      const isFull = remaining === 0;
+                      const isAlmostFull = !isFull && remaining <= Math.max(Math.floor(max * 0.2), 1);
+
+                      return (
+                        <TableRow key={slot.id}>
+                          <TableCell>
+                            <span className="flex items-center gap-1 text-sm">
+                              <Calendar className="h-3 w-3" />
+                              {format(new Date(slot.slot_date), 'MMM dd, yyyy')}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="flex items-center gap-1 text-sm">
+                              <Clock className="h-3 w-3" />
+                              {slot.start_time} - {slot.end_time}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <span className="flex items-center gap-1 text-sm">
+                                <Users className="h-3 w-3" />
+                                <span className="font-medium">
+                                  {current} / {max}
+                                </span>
+                              </span>
+                              <span
+                                className={`text-xs ${
+                                  isFull
+                                    ? 'text-red-600 font-semibold'
+                                    : isAlmostFull
+                                    ? 'text-amber-600 font-medium'
+                                    : 'text-muted-foreground'
+                                }`}
+                              >
+                                {isFull
+                                  ? 'Slot full'
+                                  : `${remaining} spot${remaining !== 1 ? 's' : ''} remaining`}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {isFull ? (
+                              <Badge className="bg-red-100 text-red-800 border border-red-200">
+                                Full
+                              </Badge>
+                            ) : (
+                              <Badge variant={slot.is_enabled ? 'default' : 'secondary'}>
+                                {slot.is_enabled ? 'Enabled' : 'Disabled'}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditSlot(slot)}
+                              >
+                                Edit
+                              </Button>
+                              <Switch
+                                checked={slot.is_enabled ?? false}
+                                onCheckedChange={() => toggleSlotStatus(slot)}
+                                disabled={isFull}
+                              />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  setSelectedSlot(slot);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       </main>
 
       {/* Delete Confirmation Dialog */}

@@ -79,12 +79,38 @@ export default function SelectSlot() {
         .order('start_time', { ascending: true });
 
       if (slotsError) throw slotsError;
-      
+
+      const rawSlots = slotsData || [];
+
+      // Compute current bookings per slot based on applications, so counts are always accurate
+      const slotIds = rawSlots.map((s) => s.id);
+      let bookedCounts: Record<string, number> = {};
+
+      if (slotIds.length > 0) {
+        const { data: appsForSlots, error: appsError } = await supabase
+          .from('applications')
+          .select('slot_id')
+          .in('slot_id', slotIds);
+
+        if (appsError) throw appsError;
+
+        bookedCounts = (appsForSlots || []).reduce((acc: Record<string, number>, app: any) => {
+          if (!app.slot_id) return acc;
+          acc[app.slot_id] = (acc[app.slot_id] || 0) + 1;
+          return acc;
+        }, {});
+      }
+
+      const slotsWithCounts: Slot[] = rawSlots.map((slot: any) => ({
+        ...slot,
+        current_capacity: bookedCounts[slot.id] ?? 0,
+      }));
+
       // Filter slots that have capacity
-      const availableSlots = (slotsData || []).filter(
-        slot => (slot.max_capacity || 50) > (slot.current_capacity || 0)
+      const availableSlots = slotsWithCounts.filter(
+        (slot) => (slot.max_capacity || 50) > (slot.current_capacity || 0)
       );
-      
+
       setSlots(availableSlots);
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -113,17 +139,6 @@ export default function SelectSlot() {
         .eq('id', applicationId);
 
       if (updateError) throw updateError;
-
-      // Increment slot capacity
-      const slot = slots.find(s => s.id === slotId);
-      if (slot) {
-        await supabase
-          .from('slots')
-          .update({
-            current_capacity: (slot.current_capacity || 0) + 1,
-          })
-          .eq('id', slotId);
-      }
 
       toast({
         title: 'Slot Selected!',
