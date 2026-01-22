@@ -56,6 +56,17 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
+interface TestAttempt {
+  id: string;
+  round_number: number | null;
+  is_passed: boolean | null;
+  is_submitted: boolean | null;
+  obtained_marks: number | null;
+  total_marks: number | null;
+  started_at: string | null;
+  ended_at: string | null;
+}
+
 interface Application {
   id: string;
   user_id: string;
@@ -81,6 +92,7 @@ interface Application {
     start_time: string;
     end_time: string;
   };
+  test_attempts?: TestAttempt[];
 }
 
 export default function ApplicationManagement() {
@@ -117,16 +129,32 @@ export default function ApplicationManagement() {
 
       // Fetch profiles separately and merge
       const userIds = [...new Set((appsData || []).map(app => app.user_id))];
+      const appIds = (appsData || []).map(app => app.id);
+      
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('user_id, full_name, email, phone, resume_url')
         .in('user_id', userIds);
 
+      // Fetch test attempts for all applications
+      const { data: testAttemptsData } = await supabase
+        .from('test_attempts')
+        .select('id, application_id, round_number, is_passed, is_submitted, obtained_marks, total_marks, started_at, ended_at')
+        .in('application_id', appIds);
+
       const profilesMap = new Map(profilesData?.map(p => [p.user_id, p]) || []);
+      const testAttemptsMap = new Map<string, TestAttempt[]>();
+      
+      (testAttemptsData || []).forEach(attempt => {
+        const existing = testAttemptsMap.get(attempt.application_id) || [];
+        existing.push(attempt);
+        testAttemptsMap.set(attempt.application_id, existing);
+      });
       
       const enrichedApps = (appsData || []).map(app => ({
         ...app,
-        profiles: profilesMap.get(app.user_id) || null
+        profiles: profilesMap.get(app.user_id) || null,
+        test_attempts: testAttemptsMap.get(app.id) || []
       }));
 
       setApplications(enrichedApps as Application[]);
@@ -764,7 +792,7 @@ export default function ApplicationManagement() {
 
       {/* Details Dialog */}
       <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Application Details</DialogTitle>
             <DialogDescription>
@@ -815,6 +843,82 @@ export default function ApplicationManagement() {
                   </p>
                 </div>
               )}
+              
+              {/* Round Progress Tracker */}
+              <div className="border-t pt-4 mt-4">
+                <Label className="text-muted-foreground mb-3 block">Round Progress</Label>
+                <div className="space-y-3">
+                  {Array.from({ length: selectedApplication.jobs?.total_rounds || 1 }).map((_, index) => {
+                    const roundNumber = index + 1;
+                    const testAttempt = selectedApplication.test_attempts?.find(
+                      t => t.round_number === roundNumber
+                    );
+                    const isCurrent = selectedApplication.current_round === roundNumber;
+                    const isPast = (selectedApplication.current_round || 1) > roundNumber;
+                    const isPassed = testAttempt?.is_passed === true;
+                    const isFailed = testAttempt?.is_passed === false;
+                    const isSubmitted = testAttempt?.is_submitted === true;
+                    
+                    return (
+                      <div 
+                        key={roundNumber} 
+                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                          isCurrent 
+                            ? 'border-primary bg-primary/5' 
+                            : isPast 
+                              ? 'border-muted bg-muted/30' 
+                              : 'border-muted-foreground/20 bg-muted/10'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                            isPassed 
+                              ? 'bg-success text-success-foreground' 
+                              : isFailed 
+                                ? 'bg-destructive text-destructive-foreground'
+                                : isCurrent 
+                                  ? 'bg-primary text-primary-foreground' 
+                                  : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {isPassed ? (
+                              <CheckCircle className="h-4 w-4" />
+                            ) : isFailed ? (
+                              <XCircle className="h-4 w-4" />
+                            ) : (
+                              roundNumber
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Round {roundNumber}</p>
+                            {testAttempt && isSubmitted && (
+                              <p className="text-xs text-muted-foreground">
+                                Score: {testAttempt.obtained_marks || 0}/{testAttempt.total_marks || 0}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {isPassed && (
+                            <Badge className="bg-success/20 text-success border-success/30">Passed</Badge>
+                          )}
+                          {isFailed && (
+                            <Badge variant="destructive" className="bg-destructive/20 text-destructive border-destructive/30">Failed</Badge>
+                          )}
+                          {isCurrent && !isSubmitted && (
+                            <Badge variant="outline" className="text-primary border-primary">Current</Badge>
+                          )}
+                          {isCurrent && isSubmitted && !isPassed && !isFailed && (
+                            <Badge variant="outline" className="text-warning border-warning">Awaiting Review</Badge>
+                          )}
+                          {!isCurrent && !isPast && (
+                            <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
           <DialogFooter>

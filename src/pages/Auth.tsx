@@ -132,26 +132,8 @@ export default function Auth() {
         });
       } else {
         // Store password in profiles table
-        try {
-          // Get the current user (should be available after signup)
-          const { data: { user } } = await supabase.auth.getUser();
-          
-          if (user) {
-            // Store the password directly in the profile
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .update({ password: data.password } as { password: string })
-              .eq('user_id', user.id);
-            
-            if (profileError) {
-              console.error('Error storing password in profile:', profileError);
-              // Don't fail the signup if password storage fails, just log it
-            }
-          }
-        } catch (passwordError) {
-          console.error('Error storing password:', passwordError);
-          // Don't fail the signup if password storage fails
-        }
+        // Note: Password is managed by Supabase Auth, not stored in profiles
+        // The user signup is complete at this point
         
         toast({
           title: 'Account Created!',
