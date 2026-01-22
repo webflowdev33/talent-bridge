@@ -157,6 +157,7 @@ export type Database = {
           question_count: number | null
           requirements: string | null
           salary_range: string | null
+          test_time_minutes: number | null
           title: string
           total_rounds: number | null
           updated_at: string | null
@@ -172,6 +173,7 @@ export type Database = {
           question_count?: number | null
           requirements?: string | null
           salary_range?: string | null
+          test_time_minutes?: number | null
           title: string
           total_rounds?: number | null
           updated_at?: string | null
@@ -187,6 +189,7 @@ export type Database = {
           question_count?: number | null
           requirements?: string | null
           salary_range?: string | null
+          test_time_minutes?: number | null
           title?: string
           total_rounds?: number | null
           updated_at?: string | null

@@ -129,6 +129,12 @@ export function Header() {
           >
             Job Openings
           </Link>
+          <Link 
+            to="/guide" 
+            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors duration-200"
+          >
+            Interview Guide
+          </Link>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -181,7 +187,7 @@ export function Header() {
                 <Link to="/auth">Sign In</Link>
               </Button>
               <Button asChild className="bg-primary text-white hover:bg-primary/90 font-semibold">
-                <Link to="/auth?tab=signup">Get Started</Link>
+                <Link to="/auth?tab=signup">Apply Now</Link>
               </Button>
             </>
           )}

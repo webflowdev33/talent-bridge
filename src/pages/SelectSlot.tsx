@@ -272,10 +272,10 @@ export default function SelectSlot() {
                                 <p className="font-medium">
                                   {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
                                 </p>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                {/* <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <Users className="h-4 w-4" />
                                   <span>{remaining} spots remaining</span>
-                                </div>
+                                </div> */}
                               </div>
                             </div>
                             

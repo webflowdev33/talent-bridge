@@ -47,6 +47,7 @@ interface Application {
     title: string;
     total_rounds: number | null;
     question_count: number | null;
+    test_time_minutes: number | null;
   };
 }
 
@@ -75,7 +76,7 @@ export default function Test() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [testAttemptId, setTestAttemptId] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState(60 * 60); // 60 minutes default
+  const [timeLeft, setTimeLeft] = useState(15 * 60); // Default 15 minutes, will be updated from job settings
   const [violationCount, setViolationCount] = useState(0);
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
@@ -90,6 +91,8 @@ export default function Test() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const submitTestRef = useRef<((autoSubmit: boolean) => Promise<void>) | null>(null);
+  const violationProcessingRef = useRef<boolean>(false);
 
   // Initialize test
   useEffect(() => {
@@ -107,7 +110,6 @@ export default function Test() {
       timerRef.current = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
-            handleAutoSubmit();
             return 0;
           }
           return prev - 1;
@@ -119,21 +121,63 @@ export default function Test() {
     };
   }, [testAttemptId, testCompleted, testStarted]);
 
-  // Fullscreen change detection
+  // Auto-submit when time reaches 0
+  useEffect(() => {
+    if (timeLeft === 0 && testAttemptId && !testCompleted && testStarted && submitTestRef.current) {
+      submitTestRef.current(true);
+    }
+  }, [timeLeft, testAttemptId, testCompleted, testStarted]);
+
+  // Fullscreen change detection - prevent exit until test is submitted
   useEffect(() => {
     const handleFullscreenChange = () => {
       const isNowFullscreen = !!document.fullscreenElement;
       setIsFullscreen(isNowFullscreen);
       
-      // If user exits fullscreen during test, count as violation
+      // If user exits fullscreen during test, force back to fullscreen and count as violation
+      // But allow exit if test is completed
       if (!isNowFullscreen && testStarted && testAttemptId && !testCompleted) {
+        // Immediately try to re-enter fullscreen
+        document.documentElement.requestFullscreen().catch(() => {
+          // If request fails, still count violation
+        });
         triggerViolation('fullscreen_exit', 'You exited fullscreen mode. Please stay in fullscreen during the test.');
+      }
+      
+      // If test is completed, ensure we exit fullscreen
+      if (testCompleted && isNowFullscreen) {
+        document.exitFullscreen().catch(() => {});
       }
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
+    
+    // Also listen for fullscreen exit attempts and prevent them
+    const handleFullscreenError = () => {
+      if (testStarted && testAttemptId && !testCompleted && !document.fullscreenElement) {
+        // Try to re-enter fullscreen
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    };
+    
+    // Monitor fullscreen state periodically (only during active test)
+    const fullscreenCheck = setInterval(() => {
+      if (testCompleted) {
+        // Test is completed, exit fullscreen if still in it
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+      } else if (testStarted && testAttemptId && !testCompleted && !document.fullscreenElement) {
+        // Test is active, force fullscreen
+        document.documentElement.requestFullscreen().catch(() => {
+          triggerViolation('fullscreen_exit', 'Fullscreen mode is required. Please stay in fullscreen during the test.');
+        });
+      }
+    }, 1000);
+    
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      clearInterval(fullscreenCheck);
     };
   }, [testStarted, testAttemptId, testCompleted]);
 
@@ -142,47 +186,171 @@ export default function Test() {
     if (!testStarted) return;
     
     const handleVisibilityChange = () => {
-      if (document.hidden && testAttemptId && !testCompleted) {
+      if (document.hidden && testAttemptId && !testCompleted && testStarted) {
         triggerViolation('tab_switch', 'You switched to another tab. This is a violation.');
       }
     };
 
     const handleBlur = () => {
-      if (testAttemptId && !testCompleted) {
+      if (testAttemptId && !testCompleted && testStarted) {
         triggerViolation('window_blur', 'You clicked outside the test window. Please stay focused on the test.');
       }
     };
 
-    // Prevent copy-paste
+    // Prevent copy-paste (only after fullscreen/test started)
     const handleCopy = (e: ClipboardEvent) => {
-      if (testAttemptId && !testCompleted) {
+      if (testAttemptId && !testCompleted && testStarted) {
         e.preventDefault();
-        // Use allowed enum value from database: 'copy_paste'
         triggerViolation('copy_paste', 'Copy-paste is not allowed during the test.');
       }
     };
 
-    // Prevent right-click context menu
+    const handlePaste = (e: ClipboardEvent) => {
+      if (testAttemptId && !testCompleted && testStarted) {
+        e.preventDefault();
+        triggerViolation('copy_paste', 'Pasting is not allowed during the test.');
+      }
+    };
+
+    const handleCut = (e: ClipboardEvent) => {
+      if (testAttemptId && !testCompleted && testStarted) {
+        e.preventDefault();
+        triggerViolation('copy_paste', 'Cut is not allowed during the test.');
+      }
+    };
+
+    // Prevent right-click context menu (only after fullscreen/test started)
     const handleContextMenu = (e: MouseEvent) => {
-      if (testAttemptId && !testCompleted) {
+      if (testAttemptId && !testCompleted && testStarted) {
         e.preventDefault();
       }
     };
 
-    // Prevent keyboard shortcuts
+    // Block all keyboard keys except allowed ones for test navigation
+    // Keyboard is disabled after user enters fullscreen (testStarted = true)
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (testAttemptId && !testCompleted) {
-        // Prevent Ctrl+C, Ctrl+V, Ctrl+A, etc.
-        if (e.ctrlKey || e.metaKey) {
-          if (['c', 'v', 'a', 'p', 's'].includes(e.key.toLowerCase())) {
-            e.preventDefault();
-            triggerViolation('keyboard_shortcut', 'Keyboard shortcuts are not allowed during the test.');
+      if (testAttemptId && !testCompleted && testStarted) {
+        const target = e.target as HTMLElement;
+        const isButton = target.tagName === 'BUTTON';
+        const isRadioInput = target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'radio';
+        
+        // Block all function keys (F1-F12) - these can open dev tools, refresh, etc.
+        if (e.key.startsWith('F') && /^F\d+$/.test(e.key)) {
+          e.preventDefault();
+          triggerViolation('keyboard_restricted', `Pressing ${e.key} is not allowed during the test.`);
+          return;
+        }
+        
+        // Block all Ctrl/Cmd/Alt combinations (shortcuts)
+        if (e.ctrlKey || e.metaKey || e.altKey) {
+          e.preventDefault();
+          triggerViolation('keyboard_shortcut', 'Keyboard shortcuts are not allowed during the test.');
+          return;
+        }
+        
+        // Block Escape key (prevents exiting fullscreen)
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          triggerViolation('keyboard_restricted', 'Exiting fullscreen is not allowed. Please complete the test.');
+          return;
+        }
+        
+        // Block Tab key (prevents tabbing out of test)
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          triggerViolation('keyboard_restricted', 'Tab key is not allowed during the test.');
+          return;
+        }
+        
+        // Allow only specific keys for test navigation
+        const allowedNavigationKeys = [
+          'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', // Navigate between questions/options
+          'Enter', 'Space', // Select option
+        ];
+        
+        // Allow number keys 1-4 for quick option selection (A, B, C, D)
+        const isNumberKey = /^[1-4]$/.test(e.key);
+        
+        // Handle number key selection (1=A, 2=B, 3=C, 4=D)
+        if (isNumberKey && questions.length > 0 && currentIndex < questions.length) {
+          const currentQuestion = questions[currentIndex];
+          if (currentQuestion) {
+            const optionMap: Record<string, string> = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' };
+            const selectedOption = optionMap[e.key];
+            if (selectedOption) {
+              // Check if this option exists for current question
+              const optionKey = `option_${selectedOption.toLowerCase()}` as keyof Question;
+              if (currentQuestion[optionKey]) {
+                e.preventDefault();
+                handleAnswerChange(currentQuestion.id, selectedOption);
+                return; // Allow this key
+              }
+            }
           }
         }
-        // Prevent F12 (DevTools)
-        if (e.key === 'F12') {
+        
+        // Handle arrow key navigation between questions
+        if (e.key === 'ArrowLeft' && !isButton && !isRadioInput) {
           e.preventDefault();
-          triggerViolation('devtools_attempt', 'Developer tools are not allowed during the test.');
+          setCurrentIndex(prev => Math.max(0, prev - 1));
+          return; // Allow this key
+        }
+        
+        if (e.key === 'ArrowRight' && !isButton && !isRadioInput) {
+          e.preventDefault();
+          setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1));
+          return; // Allow this key
+        }
+        
+        // Allow keys when clicking buttons (Previous, Next, Submit)
+        if (isButton) {
+          // Allow Enter and Space on buttons
+          if (e.key === 'Enter' || e.key === 'Space') {
+            return; // Allow button activation
+          }
+          // Block all other keys on buttons
+          e.preventDefault();
+          triggerViolation('keyboard_restricted', `Only Enter and Space are allowed on buttons.`);
+          return;
+        }
+        
+        // For radio inputs, allow arrow keys, space, enter, and numbers
+        if (isRadioInput) {
+          if (allowedNavigationKeys.includes(e.key) || isNumberKey) {
+            return; // Allow radio button navigation
+          }
+          e.preventDefault();
+          triggerViolation('keyboard_restricted', `Only arrow keys, space, enter, and numbers 1-4 are allowed for selecting answers.`);
+          return;
+        }
+        
+        // For all other cases, only allow specific navigation keys
+        if (!allowedNavigationKeys.includes(e.key) && !isNumberKey) {
+          // Block all other keys
+          e.preventDefault();
+          triggerViolation('keyboard_restricted', `Pressing "${e.key}" is not allowed. Only arrow keys, space, enter, and numbers 1-4 are permitted.`);
+          return;
+        }
+      }
+    };
+
+    // Prevent page unload/close (only after fullscreen/test started)
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (testAttemptId && !testCompleted && testStarted) {
+        e.preventDefault();
+        e.returnValue = 'You cannot close the window during the test. Please complete the test first.';
+        triggerViolation('window_close_attempt', 'Attempted to close the window during the test.');
+        return e.returnValue;
+      }
+    };
+
+    // Prevent page refresh (only after fullscreen/test started)
+    const handleKeyDownRefresh = (e: KeyboardEvent) => {
+      if (testAttemptId && !testCompleted && testStarted) {
+        // Block F5 (refresh) and Ctrl+R / Cmd+R
+        if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key === 'r')) {
+          e.preventDefault();
+          triggerViolation('refresh_attempt', 'Refreshing the page is not allowed during the test.');
         }
       }
     };
@@ -190,17 +358,25 @@ export default function Test() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleBlur);
     document.addEventListener('copy', handleCopy);
+    document.addEventListener('paste', handlePaste);
+    document.addEventListener('cut', handleCut);
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('keydown', handleKeyDownRefresh);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleBlur);
       document.removeEventListener('copy', handleCopy);
+      document.removeEventListener('paste', handlePaste);
+      document.removeEventListener('cut', handleCut);
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('keydown', handleKeyDownRefresh);
     };
-  }, [testStarted, testAttemptId, testCompleted]);
+  }, [testStarted, testAttemptId, testCompleted, questions, currentIndex]);
 
   const enterFullscreen = async () => {
     try {
@@ -222,7 +398,7 @@ export default function Test() {
       // Fetch application
       const { data: appData, error: appError } = await supabase
         .from('applications')
-        .select('id, current_round, test_enabled, job_id, jobs (title, total_rounds, question_count)')
+        .select('id, current_round, test_enabled, job_id, jobs (title, total_rounds, question_count, test_time_minutes)')
         .eq('id', applicationId)
         .eq('user_id', user!.id)
         .single();
@@ -280,7 +456,8 @@ export default function Test() {
         const elapsed = Math.floor(
           (Date.now() - new Date(existingAttempt.started_at!).getTime()) / 1000
         );
-        const remaining = (existingAttempt.duration_minutes || 60) * 60 - elapsed;
+        // Use the duration from the test attempt (which was set from job's test_time_minutes)
+        const remaining = (existingAttempt.duration_minutes || 15) * 60 - elapsed;
         setTimeLeft(Math.max(0, remaining));
 
         // Load existing answers
@@ -296,8 +473,24 @@ export default function Test() {
           });
           setAnswers(answersMap);
         }
+
+        // Fetch existing violation count for this test attempt
+        const { data: existingViolations } = await supabase
+          .from('violations')
+          .select('violation_count')
+          .eq('test_attempt_id', existingAttempt.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (existingViolations && existingViolations.length > 0) {
+          const currentCount = existingViolations[0].violation_count || 0;
+          setViolationCount(currentCount);
+          // If already at 2 violations, we'll need to auto-submit after questions are loaded
+          // This will be handled in the triggerViolation function
+        }
       } else {
         // Create new test attempt
+        const testDuration = (appData as unknown as Application).jobs?.test_time_minutes || 15;
         const { data: newAttempt, error: attemptError } = await supabase
           .from('test_attempts')
           .insert({
@@ -305,13 +498,14 @@ export default function Test() {
             user_id: user!.id,
             round_number: appData.current_round,
             started_at: new Date().toISOString(),
-            duration_minutes: 60,
+            duration_minutes: testDuration,
           })
           .select('id')
           .single();
 
         if (attemptError) throw attemptError;
         setTestAttemptId(newAttempt.id);
+        setTimeLeft(testDuration * 60); // Set initial time in seconds
       }
 
       // Fetch questions for this job and round
@@ -343,22 +537,75 @@ export default function Test() {
   };
 
   const triggerViolation = async (type: string, message: string) => {
-    const newCount = violationCount + 1;
-    setViolationCount(newCount);
-    setWarningMessage(message);
-    setShowWarning(true);
+    // Don't allow violations if test is completed or already processing
+    if (testCompleted || !testAttemptId || violationProcessingRef.current) {
+      return;
+    }
 
-    if (testAttemptId) {
+    // Prevent multiple simultaneous violation triggers
+    violationProcessingRef.current = true;
+
+    try {
+      // Fetch current violation count from database to ensure accuracy
+      // This prevents race conditions and ensures we have the correct count
+      const { data: existingViolations } = await supabase
+        .from('violations')
+        .select('violation_count')
+        .eq('test_attempt_id', testAttemptId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const currentDbCount = existingViolations && existingViolations.length > 0 
+        ? (existingViolations[0].violation_count || 0) 
+        : violationCount;
+
+      // If already at 2 violations in database, don't allow more and auto-submit
+      if (currentDbCount >= 2) {
+        setViolationCount(2);
+        // Auto-submit immediately if questions are loaded
+        if (questions.length > 0) {
+          submitTest(true);
+        }
+        return;
+      }
+
+      // Calculate new count
+      const newCount = currentDbCount + 1;
+      
+      // Update local state
+      setViolationCount(newCount);
+      setWarningMessage(message);
+      setShowWarning(true);
+
+      // Insert violation record with the new count
       await supabase.from('violations').insert({
         test_attempt_id: testAttemptId,
         user_id: user!.id,
         violation_type: type,
         violation_count: newCount,
       });
-    }
 
-    if (newCount >= 2) {
-      handleAutoSubmit();
+      // If reached 2 violations, auto-submit immediately
+      if (newCount >= 2) {
+        // Auto-submit the test immediately after 2nd violation
+        // Use submitTest directly to ensure it works
+        if (questions.length > 0) {
+          // Questions are loaded, submit immediately
+          submitTest(true);
+        } else {
+          // Questions not loaded yet, wait a bit and try again
+          setTimeout(() => {
+            if (questions.length > 0) {
+              submitTest(true);
+            }
+          }, 1000);
+        }
+      }
+    } finally {
+      // Reset processing flag after a short delay to prevent rapid-fire violations
+      setTimeout(() => {
+        violationProcessingRef.current = false;
+      }, 500);
     }
   };
 
@@ -388,10 +635,6 @@ export default function Test() {
       }
     }
   };
-
-  const handleAutoSubmit = useCallback(async () => {
-    await submitTest(true);
-  }, [testAttemptId, answers]);
 
   const submitTest = async (autoSubmit = false) => {
     if (!testAttemptId) return;
@@ -469,6 +712,11 @@ export default function Test() {
         total: totalMarks,
       });
 
+      // Ensure fullscreen is exited after test completion
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+
       toast({
         title: autoSubmit ? 'Test Auto-Submitted' : 'Test Submitted',
         description: isPassed 
@@ -487,6 +735,19 @@ export default function Test() {
       setShowConfirmSubmit(false);
     }
   };
+
+  // Store submitTest in ref for auto-submit when timer reaches 0
+  useEffect(() => {
+    submitTestRef.current = submitTest;
+  }, [testAttemptId, questions, answers]);
+
+  // Exit fullscreen when test is completed
+  useEffect(() => {
+    if (testCompleted && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+      setIsFullscreen(false);
+    }
+  }, [testCompleted]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -537,7 +798,9 @@ export default function Test() {
               {currentRoundInfo?.description && (
                 <p className="text-xs text-muted-foreground mt-1">{currentRoundInfo.description}</p>
               )}
-              <p className="text-sm text-muted-foreground">Duration: 60 minutes</p>
+              <p className="text-sm text-muted-foreground">
+                Duration: {application?.jobs?.test_time_minutes || 15} minutes
+              </p>
               <p className="text-sm text-muted-foreground">Questions: {questions.length}</p>
             </div>
 

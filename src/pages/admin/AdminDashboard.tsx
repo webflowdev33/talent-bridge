@@ -254,7 +254,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent Applications */}
-        <Card>
+        {/* <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Recent Applications</CardTitle>
@@ -294,7 +294,7 @@ export default function AdminDashboard() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card> */}
       </main>
 
       <Footer />

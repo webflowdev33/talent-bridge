@@ -37,6 +37,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Search, 
@@ -82,6 +83,7 @@ interface Application {
     email: string | null;
     phone: string | null;
     resume_url: string | null;
+    avatar_url: string | null;
   };
   jobs?: {
     title: string;
@@ -98,6 +100,7 @@ interface Application {
 export default function ApplicationManagement() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
+  const [avatarPublicUrl, setAvatarPublicUrl] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [roundFilter, setRoundFilter] = useState<string>('all');
@@ -112,6 +115,45 @@ export default function ApplicationManagement() {
   useEffect(() => {
     fetchApplications();
   }, []);
+
+  // Generate signed URL for avatar when application is selected
+  useEffect(() => {
+    const generateSignedUrl = async () => {
+      if (!selectedApplication?.profiles?.avatar_url) {
+        setAvatarPublicUrl(null);
+        return;
+      }
+
+      // If it's already a URL (http/https), use it directly
+      if (selectedApplication.profiles.avatar_url.startsWith('http://') || 
+          selectedApplication.profiles.avatar_url.startsWith('https://')) {
+        setAvatarPublicUrl(selectedApplication.profiles.avatar_url);
+        return;
+      }
+
+      // Otherwise, generate signed URL from storage
+      try {
+        const { data, error } = await supabase.storage
+          .from('avatars')
+          .createSignedUrl(selectedApplication.profiles.avatar_url, 60 * 60); // 1 hour
+
+        if (error) {
+          console.error('Error creating signed avatar URL:', error);
+          setAvatarPublicUrl(null);
+          return;
+        }
+
+        setAvatarPublicUrl(data?.signedUrl ?? null);
+      } catch (err) {
+        console.error('Error creating signed avatar URL:', err);
+        setAvatarPublicUrl(null);
+      }
+    };
+
+    if (detailsDialogOpen && selectedApplication) {
+      generateSignedUrl();
+    }
+  }, [selectedApplication?.profiles?.avatar_url, detailsDialogOpen]);
 
   const fetchApplications = async () => {
     try {
@@ -133,7 +175,7 @@ export default function ApplicationManagement() {
       
       const { data: profilesData } = await supabase
         .from('profiles')
-        .select('user_id, full_name, email, phone, resume_url')
+        .select('user_id, full_name, email, phone, resume_url, avatar_url')
         .in('user_id', userIds);
 
       // Fetch test attempts for all applications
@@ -808,19 +850,40 @@ export default function ApplicationManagement() {
           </DialogHeader>
           {selectedApplication && (
             <div className="space-y-4">
+              {/* Profile Header with Avatar */}
+              <div className="flex items-start gap-4 pb-4 border-b">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage 
+                    src={avatarPublicUrl || selectedApplication.profiles?.avatar_url || undefined} 
+                    alt={selectedApplication.profiles?.full_name || 'Profile'} 
+                  />
+                  <AvatarFallback className="text-lg">
+                    {selectedApplication.profiles?.full_name 
+                      ? selectedApplication.profiles.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                      : 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold">{selectedApplication.profiles?.full_name || 'Unknown'}</h3>
+                  <p className="text-sm text-muted-foreground">{selectedApplication.profiles?.email}</p>
+                  {selectedApplication.profiles?.phone && (
+                    <p className="text-sm text-muted-foreground">{selectedApplication.profiles.phone}</p>
+                  )}
+                  {selectedApplication.profiles?.resume_url && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => handleViewResume(selectedApplication.profiles!.resume_url!)}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      View Resume
+                    </Button>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Applicant</Label>
-                  <p className="font-medium">{selectedApplication.profiles?.full_name || 'Unknown'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Email</Label>
-                  <p className="font-medium">{selectedApplication.profiles?.email}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Phone</Label>
-                  <p className="font-medium">{selectedApplication.profiles?.phone || 'N/A'}</p>
-                </div>
                 <div>
                   <Label className="text-muted-foreground">Job</Label>
                   <p className="font-medium">{selectedApplication.jobs?.title}</p>

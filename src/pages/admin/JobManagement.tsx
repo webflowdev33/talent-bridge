@@ -39,6 +39,7 @@ interface Job {
   requirements: string | null;
   total_rounds: number | null;
   question_count: number | null;
+  test_time_minutes: number | null;
   is_active: boolean | null;
   created_at: string | null;
 }
@@ -60,6 +61,7 @@ interface JobFormData {
   requirements: string;
   total_rounds: number;
   question_count: number;
+  test_time_minutes: number;
   is_active: boolean;
 }
 
@@ -72,6 +74,7 @@ const defaultFormData: JobFormData = {
   requirements: '',
   total_rounds: 1,
   question_count: 10,
+  test_time_minutes: 15,
   is_active: true,
 };
 
@@ -122,6 +125,7 @@ export default function JobManagement() {
         requirements: job.requirements || '',
         total_rounds: job.total_rounds || 1,
         question_count: job.question_count || 10,
+        test_time_minutes: job.test_time_minutes || 15,
         is_active: job.is_active ?? true,
       });
 
@@ -170,6 +174,7 @@ export default function JobManagement() {
             requirements: formData.requirements,
             total_rounds: formData.total_rounds,
             question_count: formData.question_count,
+            test_time_minutes: formData.test_time_minutes,
             is_active: formData.is_active,
           })
           .eq('id', selectedJob.id);
@@ -202,6 +207,7 @@ export default function JobManagement() {
             requirements: formData.requirements,
             total_rounds: formData.total_rounds,
             question_count: formData.question_count,
+            test_time_minutes: formData.test_time_minutes,
             is_active: formData.is_active,
           })
           .select('id')
@@ -479,19 +485,35 @@ export default function JobManagement() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="question_count">Number of Questions to Display</Label>
-                    <Input
-                      id="question_count"
-                      type="number"
-                      min="1"
-                      max="100"
-                      value={formData.question_count}
-                      onChange={(e) => setFormData({ ...formData, question_count: parseInt(e.target.value) || 10 })}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Questions will be randomly selected from the pool during the test.
-                    </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="question_count">Number of Questions to Display</Label>
+                      <Input
+                        id="question_count"
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={formData.question_count}
+                        onChange={(e) => setFormData({ ...formData, question_count: parseInt(e.target.value) || 10 })}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Questions will be randomly selected from the pool during the test.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="test_time_minutes">Test Duration (Minutes)</Label>
+                      <Input
+                        id="test_time_minutes"
+                        type="number"
+                        min="1"
+                        max="180"
+                        value={formData.test_time_minutes}
+                        onChange={(e) => setFormData({ ...formData, test_time_minutes: parseInt(e.target.value) || 15 })}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Test will auto-submit when time expires (e.g., 15 for 15 minutes).
+                      </p>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
