@@ -56,41 +56,6 @@ export type Database = {
           },
         ]
       }
-      job_rounds: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          id: string
-          job_id: string
-          name: string
-          round_number: number
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          job_id: string
-          name: string
-          round_number: number
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          job_id?: string
-          name?: string
-          round_number?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "job_rounds_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "jobs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       applications: {
         Row: {
           admin_approved: boolean | null
@@ -141,6 +106,41 @@ export type Database = {
             columns: ["slot_id"]
             isOneToOne: false
             referencedRelation: "slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_rounds: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          job_id: string
+          name: string
+          round_number: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          job_id: string
+          name: string
+          round_number?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          job_id?: string
+          name?: string
+          round_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_rounds_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -204,9 +204,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           guide_acknowledged: boolean | null
-          guide_acknowledged_at: string | null
           id: string
-          password: string | null
           phone: string | null
           profile_completed: boolean | null
           resume_url: string | null
@@ -225,9 +223,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           guide_acknowledged?: boolean | null
-          guide_acknowledged_at?: string | null
           id?: string
-          password?: string | null
           phone?: string | null
           profile_completed?: boolean | null
           resume_url?: string | null
@@ -245,9 +241,7 @@ export type Database = {
           date_of_birth?: string | null
           email?: string | null
           full_name?: string | null
-          password?: string | null
           guide_acknowledged?: boolean | null
-          guide_acknowledged_at?: string | null
           id?: string
           phone?: string | null
           profile_completed?: boolean | null
