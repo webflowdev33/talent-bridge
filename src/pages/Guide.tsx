@@ -276,7 +276,7 @@ export default function Guide() {
                 <div className="flex items-start gap-3">
                   <FileText className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                   <p className="text-sm sm:text-base text-muted-foreground">
-                    All required details and an updated resume (PDF, max 5 MB) must be uploaded during registration
+                    All required details and a resume link must be provided during registration
                   </p>
                 </div>
                 <div className="flex items-start gap-3">

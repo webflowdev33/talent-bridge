@@ -26,7 +26,8 @@ import {
   Loader2,
   CheckCircle2,
   Image as ImageIcon,
-  X
+  X,
+  Link as LinkIcon
 } from 'lucide-react';
 
 const profileSchema = z.object({
@@ -38,6 +39,10 @@ const profileSchema = z.object({
   state: z.string().min(2, 'State is required').max(100),
   country: z.string().min(2, 'Country is required').max(100),
   zip_code: z.string().min(4, 'Zip code is required').max(20),
+  resume_url: z.union([
+    z.string().url('Please enter a valid URL'),
+    z.literal(''),
+  ]).optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -45,12 +50,9 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [resumeUrl, setResumeUrl] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarPublicUrl, setAvatarPublicUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -67,6 +69,7 @@ export default function Profile() {
       state: '',
       country: '',
       zip_code: '',
+      resume_url: '',
     },
   });
 
@@ -103,7 +106,7 @@ export default function Profile() {
           country: data.country || '',
           zip_code: data.zip_code || '',
         });
-        setResumeUrl(data.resume_url);
+        form.setValue('resume_url', data.resume_url || '');
         setAvatarUrl(data.avatar_url);
       }
     } catch (err) {
@@ -125,13 +128,21 @@ export default function Profile() {
         data.state &&
         data.country &&
         data.zip_code &&
-        resumeUrl
+        data.resume_url
       );
 
       const { error } = await supabase
         .from('profiles')
         .update({
-          ...data,
+          full_name: data.full_name,
+          phone: data.phone,
+          date_of_birth: data.date_of_birth,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          country: data.country,
+          zip_code: data.zip_code,
+          resume_url: data.resume_url || null,
           profile_completed: isComplete,
           updated_at: new Date().toISOString(),
         })
@@ -143,7 +154,7 @@ export default function Profile() {
         title: 'Profile Updated',
         description: isComplete 
           ? 'Your profile is now complete. You can apply for jobs!'
-          : 'Profile saved. Complete all fields and upload resume to apply for jobs.',
+          : 'Profile saved. Complete all fields and add resume link to apply for jobs.',
       });
 
       if (isComplete) {
@@ -255,77 +266,6 @@ export default function Profile() {
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (file.type !== 'application/pdf') {
-      toast({
-        title: 'Invalid File',
-        description: 'Please upload a PDF file.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      toast({
-        title: 'File Too Large',
-        description: 'Resume must be less than 5MB.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const fileName = `${user!.id}/${Date.now()}-resume.pdf`;
-      
-      // Delete old resume if exists
-      if (resumeUrl) {
-        const oldFileName = resumeUrl.split('/').pop();
-        if (oldFileName) {
-          await supabase.storage
-            .from('resumes')
-            .remove([`${user!.id}/${oldFileName}`]);
-        }
-      }
-      
-      const { error: uploadError } = await supabase.storage
-        .from('resumes')
-        .upload(fileName, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const resumePath = fileName;
-
-      // Update profile with resume URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ resume_url: resumePath })
-        .eq('user_id', user!.id);
-
-      if (updateError) throw updateError;
-
-      setResumeUrl(resumePath);
-      toast({
-        title: 'Resume Uploaded',
-        description: 'Your resume has been uploaded successfully.',
-      });
-    } catch (err: any) {
-      console.error('Error uploading resume:', err);
-      toast({
-        title: 'Upload Failed',
-        description: err.message || 'Failed to upload resume. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
 
   // Generate a signed URL for the avatar so it works with a private bucket
   useEffect(() => {
@@ -597,68 +537,50 @@ export default function Profile() {
               </CardContent>
             </Card>
 
-            {/* Resume Upload */}
+            {/* Resume Link */}
             <Card className="border border-border shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-foreground">
                   <FileText className="h-5 w-5" />
-                  Resume
+                  Resume Link
                 </CardTitle>
                 <CardDescription>
-                  Upload your resume in PDF format (max 5MB)
+                  Add a link to your resume (e.g., Google Drive, Dropbox, LinkedIn, or any public URL)
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                
-                {resumeUrl ? (
-                  <div className="flex items-center justify-between p-4 rounded-lg border-2 border-green-500/20 bg-green-50 dark:bg-green-950/10">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                        <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-foreground">Resume Uploaded</p>
-                        <p className="text-sm text-muted-foreground">PDF document</p>
-                      </div>
+                <div className="space-y-2">
+                  <Label htmlFor="resume_url" className="text-sm font-semibold">Resume URL</Label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="resume_url"
+                      type="url"
+                      placeholder="https://drive.google.com/file/... or https://linkedin.com/in/..."
+                      className="pl-11 h-11 border-2 focus:border-primary transition-colors"
+                      {...form.register('resume_url')}
+                    />
+                  </div>
+                  {form.formState.errors.resume_url && (
+                    <p className="text-sm text-destructive">{form.formState.errors.resume_url.message}</p>
+                  )}
+                  {form.watch('resume_url') && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg border-2 border-green-500/20 bg-green-50 dark:bg-green-950/10">
+                      <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                      <p className="text-sm text-foreground">
+                        Resume link added. You can{' '}
+                        <a 
+                          href={form.watch('resume_url') || '#'} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline font-medium"
+                        >
+                          view it here
+                        </a>
+                      </p>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                      className="border-2 border-primary text-primary hover:bg-primary hover:text-white font-semibold"
-                    >
-                      {uploading ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <Upload className="h-4 w-4 mr-2" />
-                      )}
-                      Replace
-                    </Button>
-                  </div>
-                ) : (
-                  <div 
-                    className="flex flex-col items-center justify-center p-8 rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors cursor-pointer bg-muted/30"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {uploading ? (
-                      <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-                    ) : (
-                      <Upload className="h-10 w-10 text-muted-foreground mb-4" />
-                    )}
-                    <p className="font-semibold mb-1 text-foreground">
-                      {uploading ? 'Uploading...' : 'Click to upload your resume'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">PDF format, max 5MB</p>
-                  </div>
-                )}
+                  )}
+                </div>
               </CardContent>
             </Card>
 

@@ -355,7 +355,14 @@ export default function ApplicationManagement() {
 
   const handleViewResume = async (resumePath: string) => {
     try {
-      // Generate a signed URL for the resume (valid for 1 hour)
+      // Check if it's already a URL (starts with http:// or https://)
+      if (resumePath.startsWith('http://') || resumePath.startsWith('https://')) {
+        // It's a direct URL, open it directly
+        window.open(resumePath, '_blank');
+        return;
+      }
+
+      // Otherwise, treat it as a storage path and generate a signed URL
       const { data, error } = await supabase.storage
         .from('resumes')
         .createSignedUrl(resumePath, 3600); // 1 hour expiry
