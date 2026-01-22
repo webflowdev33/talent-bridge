@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle2, Calendar, MapPin, Clock, FileText, Users, AlertCircle, Phone, Laptop, Car, UserX } from 'lucide-react';
+import { Loader2, CheckCircle2, Calendar, MapPin, Clock, FileText, Users, AlertCircle, Phone, Laptop, Car, UserX, ArrowLeft } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 
@@ -14,8 +14,11 @@ export default function Guide() {
   const [acknowledged, setAcknowledged] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
+  const [isViewOnly, setIsViewOnly] = useState(false);
+  const [alreadyAcknowledged, setAlreadyAcknowledged] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -24,6 +27,10 @@ export default function Guide() {
         navigate('/auth');
         return;
       }
+
+      // Check if this is a view-only mode (from Dashboard)
+      const viewMode = searchParams.get('view') === 'true';
+      setIsViewOnly(viewMode);
 
       try {
         const { data, error } = await supabase
@@ -35,8 +42,14 @@ export default function Guide() {
         if (error) throw error;
 
         if (data?.guide_acknowledged) {
-          // Already acknowledged, redirect to profile
-          navigate('/profile');
+          setAlreadyAcknowledged(true);
+          // If view mode, allow viewing. Otherwise redirect
+          if (viewMode) {
+            setCheckingStatus(false);
+          } else {
+            // Already acknowledged and not in view mode, redirect to profile
+            navigate('/profile');
+          }
         } else {
           setCheckingStatus(false);
         }
@@ -47,7 +60,7 @@ export default function Guide() {
     };
 
     checkAcknowledgmentStatus();
-  }, [user, navigate]);
+  }, [user, navigate, searchParams]);
 
   const handleAcknowledge = async () => {
     if (!acknowledged || !user) return;
@@ -281,7 +294,7 @@ export default function Guide() {
                 <div className="flex items-start gap-3">
                   <Phone className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                   <p className="text-sm sm:text-base text-muted-foreground">
-                    <strong className="text-foreground">Mobile phones must be submitted</strong> at the registration desk during the interview process
+                    <strong className="text-foreground">Mobile phones/Smartwatches must be Silent and in Bag / Pocket </strong>  during the interview process
                   </p>
                 </div>
               </div>
@@ -346,46 +359,75 @@ export default function Guide() {
               </p>
             </section>
 
-            {/* Acknowledgment Checkbox */}
-            <div className="pt-6 border-t border-border">
-              <div className="flex items-start space-x-3 p-4 bg-secondary rounded-lg border border-border">
-                <Checkbox
-                  id="acknowledge"
-                  checked={acknowledged}
-                  onCheckedChange={(checked) => setAcknowledged(checked === true)}
-                  className="mt-1"
-                />
-                <label
-                  htmlFor="acknowledge"
-                  className="text-sm sm:text-base text-foreground leading-relaxed cursor-pointer flex-1"
-                >
-                  I have read and understood the complete walk-in interview guide. I acknowledge all the rules, 
-                  guidelines, and requirements mentioned above.
-                </label>
-              </div>
-            </div>
+            {/* Acknowledgment Section - Only show if not in view-only mode and not already acknowledged */}
+            {!isViewOnly && !alreadyAcknowledged && (
+              <>
+                <div className="pt-6 border-t border-border">
+                  <div className="flex items-start space-x-3 p-4 bg-secondary rounded-lg border border-border">
+                    <Checkbox
+                      id="acknowledge"
+                      checked={acknowledged}
+                      onCheckedChange={(checked) => setAcknowledged(checked === true)}
+                      className="mt-1"
+                    />
+                    <label
+                      htmlFor="acknowledge"
+                      className="text-sm sm:text-base text-foreground leading-relaxed cursor-pointer flex-1"
+                    >
+                      I have read and understood the complete walk-in interview guide. I acknowledge all the rules, 
+                      guidelines, and requirements mentioned above.
+                    </label>
+                  </div>
+                </div>
 
-            {/* Submit Button */}
-            <div className="flex justify-center pt-4">
-              <Button
-                onClick={handleAcknowledge}
-                disabled={!acknowledged || isLoading}
-                className="w-full sm:w-auto min-w-[200px] bg-primary text-white hover:bg-primary/90"
-                size="lg"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    I Acknowledge & Continue
-                  </>
-                )}
-              </Button>
-            </div>
+                {/* Submit Button */}
+                <div className="flex justify-center pt-4">
+                  <Button
+                    onClick={handleAcknowledge}
+                    disabled={!acknowledged || isLoading}
+                    className="w-full sm:w-auto min-w-[200px] bg-primary text-white hover:bg-primary/90"
+                    size="lg"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        I Acknowledge & Continue
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {/* View-only mode message or back button */}
+            {(isViewOnly || alreadyAcknowledged) && (
+              <div className="pt-6 border-t border-border">
+                <div className="flex flex-col items-center gap-4">
+                  {alreadyAcknowledged && (
+                    <div className="flex items-center gap-2 p-4 bg-primary/10 border border-primary/20 rounded-lg w-full">
+                      <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+                      <p className="text-sm sm:text-base text-foreground">
+                        You have already acknowledged this guide. This is a read-only view.
+                      </p>
+                    </div>
+                  )}
+                  <Button
+                    onClick={() => navigate('/dashboard')}
+                    variant="outline"
+                    className="w-full sm:w-auto min-w-[200px]"
+                    size="lg"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Dashboard
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>

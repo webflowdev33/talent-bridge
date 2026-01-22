@@ -20,7 +20,8 @@ import {
   FileText,
   Loader2,
   Trophy,
-  Target
+  Target,
+  BookOpen
 } from 'lucide-react';
 
 interface Application {
@@ -307,13 +308,25 @@ export default function Dashboard() {
                 </p>
               </div>
             </div>
-            <Button
-              asChild
-              variant="outline"
-              className="border border-border text-sm sm:text-base w-full sm:w-auto"
-            >
-              <Link to="/profile">View Profile</Link>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <Button
+                asChild
+                variant="outline"
+                className="border border-border text-sm sm:text-base w-full sm:w-auto"
+              >
+                <Link to="/guide?view=true">
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  View Guidelines
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="border border-border text-sm sm:text-base w-full sm:w-auto"
+              >
+                <Link to="/profile">View Profile</Link>
+              </Button>
+            </div>
           </div>
 
           {/* Profile Completion Alert */}
