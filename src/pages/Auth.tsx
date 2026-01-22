@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/lib/auth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,6 +40,7 @@ export default function Auth() {
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'login');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [lastSignupAttempt, setLastSignupAttempt] = useState<number>(0);
   const { signIn, signUp, resetPassword, user, role } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -86,26 +88,85 @@ export default function Auth() {
   };
 
   const handleSignup = async (data: SignupFormData) => {
-    setIsLoading(true);
-    const { error } = await signUp(data.email, data.password);
-    setIsLoading(false);
+    // Prevent rapid successive signup attempts (debounce)
+    const now = Date.now();
+    const timeSinceLastAttempt = now - lastSignupAttempt;
+    const MIN_TIME_BETWEEN_ATTEMPTS = 2000; // 2 seconds
 
-    if (error) {
-      let message = error.message;
-      if (error.message.includes('already registered')) {
-        message = 'This email is already registered. Please sign in instead.';
-      }
+    if (timeSinceLastAttempt < MIN_TIME_BETWEEN_ATTEMPTS) {
       toast({
-        title: 'Signup Failed',
-        description: message,
+        title: 'Please wait',
+        description: `Please wait ${Math.ceil((MIN_TIME_BETWEEN_ATTEMPTS - timeSinceLastAttempt) / 1000)} second(s) before trying again.`,
         variant: 'destructive',
       });
-    } else {
+      return;
+    }
+
+    setIsLoading(true);
+    setLastSignupAttempt(now);
+    
+    try {
+      const { error } = await signUp(data.email, data.password);
+
+      if (error) {
+        let message = error.message;
+        let title = 'Signup Failed';
+
+        // Handle rate limit errors specifically
+        if (error.message.toLowerCase().includes('rate limit') || 
+            error.message.toLowerCase().includes('too many requests') ||
+            error.message.toLowerCase().includes('429')) {
+          title = 'Rate Limit Exceeded';
+          message = 'Too many signup attempts. Please wait a few minutes before trying again.';
+        } else if (error.message.includes('already registered') || 
+                   error.message.includes('already been registered')) {
+          message = 'This email is already registered. Please sign in instead.';
+        } else if (error.message.includes('email')) {
+          message = 'Invalid email address. Please check and try again.';
+        }
+
+        toast({
+          title,
+          description: message,
+          variant: 'destructive',
+        });
+      } else {
+        // Store password in profiles table
+        try {
+          // Get the current user (should be available after signup)
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (user) {
+            // Store the password directly in the profile
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update({ password: data.password } as { password: string })
+              .eq('user_id', user.id);
+            
+            if (profileError) {
+              console.error('Error storing password in profile:', profileError);
+              // Don't fail the signup if password storage fails, just log it
+            }
+          }
+        } catch (passwordError) {
+          console.error('Error storing password:', passwordError);
+          // Don't fail the signup if password storage fails
+        }
+        
+        toast({
+          title: 'Account Created!',
+          description: 'Please Fill your Details to continue',
+        });
+        navigate('/guide');
+      }
+    } catch (err: any) {
       toast({
-        title: 'Account Created!',
-        description: 'Please Check you Mail and confirm you Identity to continue.',
+        title: 'Signup Failed',
+        description: err.message || 'An unexpected error occurred. Please try again later.',
+        variant: 'destructive',
       });
-      navigate('/guide');
+    } finally {
+      setIsLoading(false);
     }
   };
 

@@ -206,6 +206,7 @@ export type Database = {
           guide_acknowledged: boolean | null
           guide_acknowledged_at: string | null
           id: string
+          password: string | null
           phone: string | null
           profile_completed: boolean | null
           resume_url: string | null
@@ -226,6 +227,7 @@ export type Database = {
           guide_acknowledged?: boolean | null
           guide_acknowledged_at?: string | null
           id?: string
+          password?: string | null
           phone?: string | null
           profile_completed?: boolean | null
           resume_url?: string | null
@@ -243,6 +245,7 @@ export type Database = {
           date_of_birth?: string | null
           email?: string | null
           full_name?: string | null
+          password?: string | null
           guide_acknowledged?: boolean | null
           guide_acknowledged_at?: string | null
           id?: string

@@ -28,6 +28,7 @@ interface Application {
   status: string;
   current_round: number;
   test_enabled: boolean;
+  admin_approved: boolean | null;
   created_at: string;
   jobs: {
     id: string;
@@ -120,6 +121,7 @@ export default function Dashboard() {
           status,
           current_round,
           test_enabled,
+          admin_approved,
           created_at,
           jobs (id, title, department, total_rounds),
           slots (slot_date, start_time, end_time)
@@ -422,6 +424,16 @@ export default function Dashboard() {
                             <Badge className={`w-fit ${status.color} font-semibold text-xs`}>
                               <StatusIcon className="h-3 w-3 mr-1" />
                               {status.label}
+                            </Badge>
+                            <Badge 
+                              variant="outline" 
+                              className={`w-fit font-semibold text-xs ${
+                                app.admin_approved 
+                                  ? 'bg-accent/10 text-accent border-accent' 
+                                  : 'bg-warning/10 text-warning border-warning'
+                              }`}
+                            >
+                              {app.admin_approved ? 'Approved' : 'Pending Approval'}
                             </Badge>
                             {app.status === 'applied' && !app.slots && (
                               <Button

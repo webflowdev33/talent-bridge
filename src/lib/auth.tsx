@@ -43,17 +43,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let roleFetchTimeout: NodeJS.Timeout | null = null;
+    let isMounted = true;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (!isMounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Defer role fetch to avoid deadlock
+        // Clear any pending role fetch
+        if (roleFetchTimeout) {
+          clearTimeout(roleFetchTimeout);
+        }
+        
+        // Defer role fetch to avoid deadlock and reduce rapid API calls
         if (session?.user) {
-          setTimeout(() => {
-            fetchUserRole(session.user.id).then(setRole);
-          }, 0);
+          // Add a small delay to batch operations and avoid rate limits
+          roleFetchTimeout = setTimeout(() => {
+            if (isMounted) {
+              fetchUserRole(session.user.id).then((role) => {
+                if (isMounted) {
+                  setRole(role);
+                }
+              });
+            }
+          }, 100);
         } else {
           setRole(null);
         }
@@ -63,28 +80,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserRole(session.user.id).then(setRole);
+        // Add delay to avoid immediate API call after session check
+        roleFetchTimeout = setTimeout(() => {
+          if (isMounted) {
+            fetchUserRole(session.user.id).then((role) => {
+              if (isMounted) {
+                setRole(role);
+              }
+            });
+          }
+        }, 100);
       }
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+      if (roleFetchTimeout) {
+        clearTimeout(roleFetchTimeout);
+      }
+    };
   }, []);
 
   const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
+      });
+
+      // Convert Supabase error to standard Error format
+      if (error) {
+        return { 
+          error: new Error(error.message || 'Signup failed. Please try again.') 
+        };
       }
-    });
-    return { error };
+
+      return { error: null };
+    } catch (err: any) {
+      // Handle network errors, rate limits, etc.
+      const errorMessage = err.message || 'An unexpected error occurred. Please try again later.';
+      return { 
+        error: new Error(errorMessage) 
+      };
+    }
   };
 
   const signIn = async (email: string, password: string) => {
