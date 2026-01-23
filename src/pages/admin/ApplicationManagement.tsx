@@ -54,7 +54,9 @@ import {
   Trash2,
   Layers,
   Users,
-  Briefcase
+  Briefcase,
+  Ban,
+  Calendar
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -106,6 +108,7 @@ export default function ApplicationManagement() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [roundFilter, setRoundFilter] = useState<string>('all');
   const [jobFilter, setJobFilter] = useState<string>('all');
+  const [slotFilter, setSlotFilter] = useState<string>('all');
   const [groupByRound, setGroupByRound] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -223,6 +226,28 @@ export default function ApplicationManagement() {
 
       if (error) throw error;
       toast({ title: 'Success', description: 'Application approved' });
+      fetchApplications();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleUnapprove = async (application: Application) => {
+    setActionLoading(application.id);
+    try {
+      const { error } = await supabase
+        .from('applications')
+        .update({ admin_approved: false })
+        .eq('id', application.id);
+
+      if (error) throw error;
+      toast({ title: 'Success', description: 'Application un-approved' });
       fetchApplications();
     } catch (error: any) {
       toast({
@@ -461,8 +486,8 @@ export default function ApplicationManagement() {
 
     const matchesStatus = 
       statusFilter === 'all' ||
-      (statusFilter === 'pending' && !app.admin_approved && app.status === 'applied') ||
-      (statusFilter === 'approved' && app.admin_approved && app.status === 'applied') ||
+      (statusFilter === 'pending' && !app.admin_approved && app.status !== 'rejected' && app.status !== 'selected') ||
+      (statusFilter === 'approved' && app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && app.status !== 'passed' && app.status !== 'failed' && !app.test_enabled) ||
       (statusFilter === 'test_enabled' && app.test_enabled) ||
       (statusFilter === 'passed' && app.status === 'passed') ||
       (statusFilter === 'failed' && app.status === 'failed') ||
@@ -482,7 +507,12 @@ export default function ApplicationManagement() {
       jobFilter === 'all' ||
       app.job_id === jobFilter;
 
-    return matchesSearch && matchesStatus && matchesRound && matchesJob;
+    const matchesSlot = 
+      slotFilter === 'all' ||
+      slotFilter === 'no_slot' && !app.slot_id ||
+      app.slot_id === slotFilter;
+
+    return matchesSearch && matchesStatus && matchesRound && matchesJob && matchesSlot;
   });
 
   // Group applications by round
@@ -502,6 +532,28 @@ export default function ApplicationManagement() {
   const availableJobs = Array.from(
     new Map(applications.map(app => [app.job_id, { id: app.job_id, title: app.jobs?.title || 'Unknown' }])).values()
   ).filter(job => job.id);
+
+  // Get unique slots for filter
+  const availableSlots = Array.from(
+    new Map(
+      applications
+        .filter(app => app.slot_id && app.slots)
+        .map(app => [
+          app.slot_id!,
+          {
+            id: app.slot_id!,
+            date: app.slots!.slot_date,
+            start_time: app.slots!.start_time,
+            end_time: app.slots!.end_time,
+          }
+        ])
+    ).values()
+  ).sort((a, b) => {
+    // Sort by date, then by start time
+    const dateCompare = a.date.localeCompare(b.date);
+    if (dateCompare !== 0) return dateCompare;
+    return a.start_time.localeCompare(b.start_time);
+  });
 
   if (loading) {
     return (
@@ -527,74 +579,88 @@ export default function ApplicationManagement() {
 
         {/* Filters */}
         <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by name, email, or job title..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
+          <CardContent className="pt-4 pb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2">
+              <div className="xl:col-span-2">
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-7 h-9 text-sm"
+                  />
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[200px]">
-                    <Filter className="mr-2 h-4 w-4" />
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending Approval</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="test_enabled">Test Enabled</SelectItem>
-                    <SelectItem value="passed">Passed</SelectItem>
-                    <SelectItem value="failed">Failed</SelectItem>
-                    <SelectItem value="selected">Selected</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={roundFilter} onValueChange={setRoundFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <Layers className="mr-2 h-4 w-4" />
-                    <SelectValue placeholder="Filter by round" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Rounds</SelectItem>
-                    {availableRounds.map(round => (
-                      <SelectItem key={round} value={`round_${round}`}>
-                        Round {round}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="final">Final Round</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={jobFilter} onValueChange={setJobFilter}>
-                  <SelectTrigger className="w-[200px]">
-                    <Briefcase className="mr-2 h-4 w-4" />
-                    <SelectValue placeholder="Filter by job" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Jobs</SelectItem>
-                    {availableJobs.map(job => (
-                      <SelectItem key={job.id} value={job.id}>
-                        {job.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant={groupByRound ? "default" : "outline"}
-                  onClick={() => setGroupByRound(!groupByRound)}
-                  className="w-[180px]"
-                >
-                  <Users className="mr-2 h-4 w-4" />
-                  {groupByRound ? 'Ungroup' : 'Group by Round'}
-                </Button>
               </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-9 text-sm">
+                  <Filter className="mr-1.5 h-3.5 w-3.5" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending Approval</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="test_enabled">Test Enabled</SelectItem>
+                  <SelectItem value="passed">Passed</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="selected">Selected</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={roundFilter} onValueChange={setRoundFilter}>
+                <SelectTrigger className="h-9 text-sm">
+                  <Layers className="mr-1.5 h-3.5 w-3.5" />
+                  <SelectValue placeholder="Round" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Rounds</SelectItem>
+                  {availableRounds.map(round => (
+                    <SelectItem key={round} value={`round_${round}`}>
+                      Round {round}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="final">Final Round</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={jobFilter} onValueChange={setJobFilter}>
+                <SelectTrigger className="h-9 text-sm">
+                  <Briefcase className="mr-1.5 h-3.5 w-3.5" />
+                  <SelectValue placeholder="Job" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Jobs</SelectItem>
+                  {availableJobs.map(job => (
+                    <SelectItem key={job.id} value={job.id}>
+                      {job.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={slotFilter} onValueChange={setSlotFilter}>
+                <SelectTrigger className="h-9 text-sm">
+                  <Calendar className="mr-1.5 h-3.5 w-3.5" />
+                  <SelectValue placeholder="Slot" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Slots</SelectItem>
+                  <SelectItem value="no_slot">No Slot</SelectItem>
+                  {availableSlots.map(slot => (
+                    <SelectItem key={slot.id} value={slot.id}>
+                      {format(new Date(slot.date), 'MMM dd')} - {slot.start_time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant={groupByRound ? "default" : "outline"}
+                onClick={() => setGroupByRound(!groupByRound)}
+                className="h-9 text-sm"
+                size="sm"
+              >
+                <Users className="mr-1.5 h-3.5 w-3.5" />
+                {groupByRound ? 'Ungroup' : 'Group'}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -711,11 +777,19 @@ export default function ApplicationManagement() {
                                         </DropdownMenuItem>
                                       </>
                                     )}
-                                    {app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && app.status !== 'passed' && (
-                                      <DropdownMenuItem onClick={() => handleMarkAsPassed(app)}>
-                                        <UserCheck className="mr-2 h-4 w-4 text-success" />
-                                        Mark as Passed
-                                      </DropdownMenuItem>
+                                    {app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && (
+                                      <>
+                                        <DropdownMenuItem onClick={() => handleUnapprove(app)}>
+                                          <Ban className="mr-2 h-4 w-4 text-warning" />
+                                          Un-approve
+                                        </DropdownMenuItem>
+                                        {app.status !== 'passed' && (
+                                          <DropdownMenuItem onClick={() => handleMarkAsPassed(app)}>
+                                            <UserCheck className="mr-2 h-4 w-4 text-success" />
+                                            Mark as Passed
+                                          </DropdownMenuItem>
+                                        )}
+                                      </>
                                     )}
                                     {app.admin_approved && app.status === 'passed' && (
                                       <DropdownMenuItem onClick={() => handleMoveToNextRound(app)}>
@@ -828,11 +902,19 @@ export default function ApplicationManagement() {
                                 </DropdownMenuItem>
                               </>
                             )}
-                            {app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && app.status !== 'passed' && (
-                              <DropdownMenuItem onClick={() => handleMarkAsPassed(app)}>
-                                <UserCheck className="mr-2 h-4 w-4 text-success" />
-                                Mark as Passed
-                              </DropdownMenuItem>
+                            {app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && (
+                              <>
+                                <DropdownMenuItem onClick={() => handleUnapprove(app)}>
+                                  <Ban className="mr-2 h-4 w-4 text-warning" />
+                                  Un-approve
+                                </DropdownMenuItem>
+                                {app.status !== 'passed' && (
+                                  <DropdownMenuItem onClick={() => handleMarkAsPassed(app)}>
+                                    <UserCheck className="mr-2 h-4 w-4 text-success" />
+                                    Mark as Passed
+                                  </DropdownMenuItem>
+                                )}
+                              </>
                             )}
                             {app.admin_approved && app.status === 'passed' && (
                               <DropdownMenuItem onClick={() => handleMoveToNextRound(app)}>
