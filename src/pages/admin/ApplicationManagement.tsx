@@ -56,7 +56,8 @@ import {
   Users,
   Briefcase,
   Ban,
-  Calendar
+  Calendar,
+  ArrowRightLeft
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -114,13 +115,32 @@ export default function ApplicationManagement() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [applicationToDelete, setApplicationToDelete] = useState<Application | null>(null);
+  const [changeJobDialogOpen, setChangeJobDialogOpen] = useState(false);
+  const [applicationToChangeJob, setApplicationToChangeJob] = useState<Application | null>(null);
+  const [selectedNewJobId, setSelectedNewJobId] = useState<string>('');
+  const [jobs, setJobs] = useState<Array<{ id: string; title: string }>>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [avatarUrls, setAvatarUrls] = useState<Map<string, string>>(new Map());
   const { toast } = useToast();
 
   useEffect(() => {
     fetchApplications();
+    fetchJobs();
   }, []);
+
+  const fetchJobs = async () => {
+    try {
+      const { data: jobsData, error: jobsError } = await supabase
+        .from('jobs')
+        .select('id, title')
+        .order('title');
+
+      if (jobsError) throw jobsError;
+      setJobs(jobsData || []);
+    } catch (error: any) {
+      console.error('Error fetching jobs:', error);
+    }
+  };
 
   // Generate signed URL for avatar when application is selected
   useEffect(() => {
@@ -387,6 +407,39 @@ export default function ApplicationManagement() {
 
       if (error) throw error;
       toast({ title: 'Success', description: 'Candidate marked as passed for this round.' });
+      fetchApplications();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleChangeJob = async () => {
+    if (!applicationToChangeJob || !selectedNewJobId) return;
+
+    setActionLoading(applicationToChangeJob.id);
+    try {
+      const { error } = await supabase
+        .from('applications')
+        .update({ job_id: selectedNewJobId })
+        .eq('id', applicationToChangeJob.id);
+
+      if (error) throw error;
+      
+      const newJobTitle = jobs.find(j => j.id === selectedNewJobId)?.title || 'Unknown';
+      toast({ 
+        title: 'Success', 
+        description: `Job changed to ${newJobTitle}` 
+      });
+      
+      setChangeJobDialogOpen(false);
+      setApplicationToChangeJob(null);
+      setSelectedNewJobId('');
       fetchApplications();
     } catch (error: any) {
       toast({
@@ -813,10 +866,6 @@ export default function ApplicationManagement() {
                                           <CheckCircle className="mr-2 h-4 w-4 text-success" />
                                           Approve
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleReject(app)}>
-                                          <XCircle className="mr-2 h-4 w-4 text-destructive" />
-                                          Reject
-                                        </DropdownMenuItem>
                                       </>
                                     )}
                                     {app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && (
@@ -841,6 +890,25 @@ export default function ApplicationManagement() {
                                           : `Move to Round ${(app.current_round || 1) + 1}`}
                                       </DropdownMenuItem>
                                     )}
+                                    {app.status !== 'rejected' && app.status !== 'selected' && (
+                                      <DropdownMenuItem 
+                                        onClick={() => handleReject(app)}
+                                        className="text-destructive focus:text-destructive"
+                                      >
+                                        <XCircle className="mr-2 h-4 w-4" />
+                                        Reject
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem 
+                                      onClick={() => {
+                                        setApplicationToChangeJob(app);
+                                        setSelectedNewJobId(app.job_id);
+                                        setChangeJobDialogOpen(true);
+                                      }}
+                                    >
+                                      <ArrowRightLeft className="mr-2 h-4 w-4" />
+                                      Change Job
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem 
                                       onClick={() => {
                                         setApplicationToDelete(app);
@@ -951,10 +1019,6 @@ export default function ApplicationManagement() {
                                   <CheckCircle className="mr-2 h-4 w-4 text-success" />
                                   Approve
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleReject(app)}>
-                                  <XCircle className="mr-2 h-4 w-4 text-destructive" />
-                                  Reject
-                                </DropdownMenuItem>
                               </>
                             )}
                             {app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && (
@@ -979,6 +1043,25 @@ export default function ApplicationManagement() {
                                   : `Move to Round ${(app.current_round || 1) + 1}`}
                               </DropdownMenuItem>
                             )}
+                            {app.status !== 'rejected' && app.status !== 'selected' && (
+                              <DropdownMenuItem 
+                                onClick={() => handleReject(app)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <XCircle className="mr-2 h-4 w-4" />
+                                Reject
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setApplicationToChangeJob(app);
+                                setSelectedNewJobId(app.job_id);
+                                setChangeJobDialogOpen(true);
+                              }}
+                            >
+                              <ArrowRightLeft className="mr-2 h-4 w-4" />
+                              Change Job
+                            </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => {
                                 setApplicationToDelete(app);
@@ -1186,6 +1269,50 @@ export default function ApplicationManagement() {
             >
               {actionLoading === applicationToDelete?.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Job Dialog */}
+      <Dialog open={changeJobDialogOpen} onOpenChange={setChangeJobDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Job</DialogTitle>
+            <DialogDescription>
+              Change the job for {applicationToChangeJob?.profiles?.full_name || 'this candidate'}. 
+              Current job: {applicationToChangeJob?.jobs?.title || 'Unknown'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label>Select New Job</Label>
+            <Select value={selectedNewJobId} onValueChange={setSelectedNewJobId}>
+              <SelectTrigger className="mt-2">
+                <SelectValue placeholder="Select a job" />
+              </SelectTrigger>
+              <SelectContent>
+                {jobs.map((job) => (
+                  <SelectItem key={job.id} value={job.id}>
+                    {job.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setChangeJobDialogOpen(false);
+              setApplicationToChangeJob(null);
+              setSelectedNewJobId('');
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleChangeJob} 
+              disabled={actionLoading === applicationToChangeJob?.id || !selectedNewJobId || selectedNewJobId === applicationToChangeJob?.job_id}
+            >
+              {actionLoading === applicationToChangeJob?.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Change Job
             </Button>
           </DialogFooter>
         </DialogContent>
