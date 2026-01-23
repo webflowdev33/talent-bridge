@@ -53,7 +53,8 @@ import {
   Play,
   Trash2,
   Layers,
-  Users
+  Users,
+  Briefcase
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -104,6 +105,7 @@ export default function ApplicationManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [roundFilter, setRoundFilter] = useState<string>('all');
+  const [jobFilter, setJobFilter] = useState<string>('all');
   const [groupByRound, setGroupByRound] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -476,7 +478,11 @@ export default function ApplicationManagement() {
       (roundFilter === 'round_5' && app.current_round === 5) ||
       (roundFilter === 'final' && app.current_round === app.jobs?.total_rounds);
 
-    return matchesSearch && matchesStatus && matchesRound;
+    const matchesJob = 
+      jobFilter === 'all' ||
+      app.job_id === jobFilter;
+
+    return matchesSearch && matchesStatus && matchesRound && matchesJob;
   });
 
   // Group applications by round
@@ -491,6 +497,11 @@ export default function ApplicationManagement() {
 
   // Get unique rounds for filter
   const availableRounds = Array.from(new Set(applications.map(app => app.current_round || 1))).sort((a, b) => a - b);
+
+  // Get unique jobs for filter
+  const availableJobs = Array.from(
+    new Map(applications.map(app => [app.job_id, { id: app.job_id, title: app.jobs?.title || 'Unknown' }])).values()
+  ).filter(job => job.id);
 
   if (loading) {
     return (
@@ -559,6 +570,20 @@ export default function ApplicationManagement() {
                       </SelectItem>
                     ))}
                     <SelectItem value="final">Final Round</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={jobFilter} onValueChange={setJobFilter}>
+                  <SelectTrigger className="w-[200px]">
+                    <Briefcase className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="Filter by job" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Jobs</SelectItem>
+                    {availableJobs.map(job => (
+                      <SelectItem key={job.id} value={job.id}>
+                        {job.title}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Button
