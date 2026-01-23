@@ -115,6 +115,7 @@ export default function ApplicationManagement() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [applicationToDelete, setApplicationToDelete] = useState<Application | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [avatarUrls, setAvatarUrls] = useState<Map<string, string>>(new Map());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -205,6 +206,34 @@ export default function ApplicationManagement() {
       }));
 
       setApplications(enrichedApps as Application[]);
+
+      // Generate signed URLs for all avatars
+      const avatarUrlMap = new Map<string, string>();
+      const avatarPromises = (profilesData || [])
+        .filter(profile => profile.avatar_url)
+        .map(async (profile) => {
+          try {
+            // If it's already a URL (http/https), use it directly
+            if (profile.avatar_url!.startsWith('http://') || profile.avatar_url!.startsWith('https://')) {
+              avatarUrlMap.set(profile.user_id, profile.avatar_url!);
+              return;
+            }
+
+            // Otherwise, generate signed URL from storage
+            const { data, error } = await supabase.storage
+              .from('avatars')
+              .createSignedUrl(profile.avatar_url!, 60 * 60); // 1 hour
+
+            if (!error && data) {
+              avatarUrlMap.set(profile.user_id, data.signedUrl);
+            }
+          } catch (err) {
+            console.error('Error creating signed avatar URL:', err);
+          }
+        });
+
+      await Promise.all(avatarPromises);
+      setAvatarUrls(avatarUrlMap);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -715,9 +744,22 @@ export default function ApplicationManagement() {
                           {roundApps.map((app) => (
                             <TableRow key={app.id}>
                               <TableCell>
-                                <div>
-                                  <p className="font-medium">{app.profiles?.full_name || 'Unknown'}</p>
-                                  <p className="text-sm text-muted-foreground">{app.profiles?.email}</p>
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-10 w-10">
+                                    <AvatarImage
+                                      src={avatarUrls.get(app.user_id) || app.profiles?.avatar_url || undefined}
+                                      alt={app.profiles?.full_name || 'User'}
+                                    />
+                                    <AvatarFallback>
+                                      {app.profiles?.full_name
+                                        ? app.profiles.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                                        : 'U'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="font-medium">{app.profiles?.full_name || 'Unknown'}</p>
+                                    <p className="text-sm text-muted-foreground">{app.profiles?.email}</p>
+                                  </div>
                                 </div>
                               </TableCell>
                               <TableCell>{app.jobs?.title || 'Unknown'}</TableCell>
@@ -837,9 +879,22 @@ export default function ApplicationManagement() {
                   {filteredApplications.map((app) => (
                     <TableRow key={app.id}>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{app.profiles?.full_name || 'Unknown'}</p>
-                          <p className="text-sm text-muted-foreground">{app.profiles?.email}</p>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage
+                              src={avatarUrls.get(app.user_id) || app.profiles?.avatar_url || undefined}
+                              alt={app.profiles?.full_name || 'User'}
+                            />
+                            <AvatarFallback>
+                              {app.profiles?.full_name
+                                ? app.profiles.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                                : 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{app.profiles?.full_name || 'Unknown'}</p>
+                            <p className="text-sm text-muted-foreground">{app.profiles?.email}</p>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>{app.jobs?.title || 'Unknown'}</TableCell>
