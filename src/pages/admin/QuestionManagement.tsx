@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -41,7 +42,9 @@ import {
   FileSpreadsheet, 
   Download,
   Loader2,
-  HelpCircle
+  HelpCircle,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -102,6 +105,8 @@ export default function QuestionManagement() {
   const [uploading, setUploading] = useState(false);
   const [uploadJobId, setUploadJobId] = useState<string>('');
   const [uploadRound, setUploadRound] = useState<number>(1);
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -218,6 +223,7 @@ export default function QuestionManagement() {
       if (error) throw error;
       toast({ title: 'Success', description: 'Question deleted successfully' });
       setDeleteDialogOpen(false);
+      setSelectedQuestion(null);
       fetchData();
     } catch (error: any) {
       toast({
@@ -228,6 +234,54 @@ export default function QuestionManagement() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedQuestionIds.size === 0) return;
+    setSubmitting(true);
+
+    try {
+      const questionIdsArray = Array.from(selectedQuestionIds);
+      const { error } = await supabase
+        .from('questions')
+        .delete()
+        .in('id', questionIdsArray);
+
+      if (error) throw error;
+      toast({ 
+        title: 'Success', 
+        description: `${questionIdsArray.length} question(s) deleted successfully` 
+      });
+      setBulkDeleteDialogOpen(false);
+      setSelectedQuestionIds(new Set());
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedQuestionIds.size === filteredQuestions.length) {
+      setSelectedQuestionIds(new Set());
+    } else {
+      setSelectedQuestionIds(new Set(filteredQuestions.map(q => q.id)));
+    }
+  };
+
+  const handleToggleQuestion = (questionId: string) => {
+    const newSelected = new Set(selectedQuestionIds);
+    if (newSelected.has(questionId)) {
+      newSelected.delete(questionId);
+    } else {
+      newSelected.add(questionId);
+    }
+    setSelectedQuestionIds(newSelected);
   };
 
   const downloadTemplate = () => {
@@ -332,6 +386,11 @@ export default function QuestionManagement() {
   const filteredQuestions = selectedJobFilter === 'all'
     ? questions
     : questions.filter(q => q.job_id === selectedJobFilter);
+
+  // Clear selection when filter changes
+  useEffect(() => {
+    setSelectedQuestionIds(new Set());
+  }, [selectedJobFilter]);
 
   if (loading) {
     return (
@@ -564,21 +623,54 @@ export default function QuestionManagement() {
         {/* Filters */}
         <Card className="mb-6">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <Label>Filter by Job:</Label>
-              <Select value={selectedJobFilter} onValueChange={setSelectedJobFilter}>
-                <SelectTrigger className="w-[250px]">
-                  <SelectValue placeholder="All Jobs" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Jobs</SelectItem>
-                  {jobs.map((job) => (
-                    <SelectItem key={job.id} value={job.id}>
-                      {job.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <Label>Filter by Job:</Label>
+                <Select value={selectedJobFilter} onValueChange={setSelectedJobFilter}>
+                  <SelectTrigger className="w-[250px]">
+                    <SelectValue placeholder="All Jobs" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Jobs</SelectItem>
+                    {jobs.map((job) => (
+                      <SelectItem key={job.id} value={job.id}>
+                        {job.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {filteredQuestions.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAll}
+                  >
+                    {selectedQuestionIds.size === filteredQuestions.length ? (
+                      <>
+                        <Square className="mr-2 h-4 w-4" />
+                        Deselect All
+                      </>
+                    ) : (
+                      <>
+                        <CheckSquare className="mr-2 h-4 w-4" />
+                        Select All
+                      </>
+                    )}
+                  </Button>
+                  {selectedQuestionIds.size > 0 && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setBulkDeleteDialogOpen(true)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Selected ({selectedQuestionIds.size})
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -608,6 +700,16 @@ export default function QuestionManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={
+                          filteredQuestions.length > 0 && 
+                          selectedQuestionIds.size === filteredQuestions.length
+                        }
+                        onCheckedChange={handleSelectAll}
+                        aria-label="Select all"
+                      />
+                    </TableHead>
                     <TableHead className="w-[40%]">Question</TableHead>
                     <TableHead>Job</TableHead>
                     <TableHead>Round</TableHead>
@@ -619,6 +721,13 @@ export default function QuestionManagement() {
                 <TableBody>
                   {filteredQuestions.map((question) => (
                     <TableRow key={question.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedQuestionIds.has(question.id)}
+                          onCheckedChange={() => handleToggleQuestion(question.id)}
+                          aria-label={`Select question ${question.id}`}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">
                         <p className="line-clamp-2">{question.question_text}</p>
                       </TableCell>
@@ -673,12 +782,36 @@ export default function QuestionManagement() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setDeleteDialogOpen(false);
+              setSelectedQuestion(null);
+            }}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation */}
+      <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Selected Questions</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedQuestionIds.size} selected question(s)? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={submitting}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete {selectedQuestionIds.size} Question(s)
             </Button>
           </DialogFooter>
         </DialogContent>
