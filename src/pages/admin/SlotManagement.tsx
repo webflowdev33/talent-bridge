@@ -25,8 +25,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Calendar, Clock, Users, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Calendar, Clock, Users, Loader2, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Slot {
@@ -39,6 +46,9 @@ interface Slot {
   current_capacity: number | null;
   is_enabled: boolean | null;
   created_at: string | null;
+  round_number: number | null;
+  mode: string | null;
+  venue: string | null;
 }
 
 interface SlotFormData {
@@ -47,6 +57,9 @@ interface SlotFormData {
   end_time: string;
   max_capacity: number;
   is_enabled: boolean;
+  round_number: number | null;
+  mode: string;
+  venue: string;
 }
 
 const defaultFormData: SlotFormData = {
@@ -55,7 +68,15 @@ const defaultFormData: SlotFormData = {
   end_time: '10:00',
   max_capacity: 50,
   is_enabled: false,
+  round_number: null,
+  mode: 'online',
+  venue: '',
 };
+
+const SLOT_MODES = [
+  { value: 'online', label: 'Online' },
+  { value: 'in_person', label: 'In-Person' },
+];
 
 export default function SlotManagement() {
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -139,6 +160,9 @@ export default function SlotManagement() {
       end_time: slot.end_time,
       max_capacity: slot.max_capacity || 50,
       is_enabled: Boolean(slot.is_enabled),
+      round_number: slot.round_number,
+      mode: slot.mode || 'online',
+      venue: slot.venue || '',
     });
     setDialogOpen(true);
   };
@@ -158,6 +182,9 @@ export default function SlotManagement() {
             end_time: formData.end_time,
             max_capacity: formData.max_capacity,
             is_enabled: formData.is_enabled,
+            round_number: formData.round_number,
+            mode: formData.mode,
+            venue: formData.mode === 'in_person' ? formData.venue : null,
           })
           .eq('id', selectedSlot.id);
 
@@ -173,6 +200,9 @@ export default function SlotManagement() {
           max_capacity: formData.max_capacity,
           is_enabled: formData.is_enabled,
           current_capacity: 0,
+          round_number: formData.round_number,
+          mode: formData.mode,
+          venue: formData.mode === 'in_person' ? formData.venue : null,
         });
 
         if (error) throw error;
@@ -339,6 +369,54 @@ export default function SlotManagement() {
                       onChange={(e) => setFormData({ ...formData, max_capacity: parseInt(e.target.value) || 50 })}
                     />
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="mode">Mode *</Label>
+                      <Select
+                        value={formData.mode}
+                        onValueChange={(value) => setFormData({ ...formData, mode: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SLOT_MODES.map((mode) => (
+                            <SelectItem key={mode.value} value={mode.value}>
+                              {mode.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="round_number">Round Number (Optional)</Label>
+                      <Input
+                        id="round_number"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={formData.round_number ?? ''}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          round_number: e.target.value ? parseInt(e.target.value) : null 
+                        })}
+                        placeholder="Any round"
+                      />
+                    </div>
+                  </div>
+
+                  {formData.mode === 'in_person' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="venue">Venue</Label>
+                      <Input
+                        id="venue"
+                        value={formData.venue}
+                        onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
+                        placeholder="e.g., Conference Room A, Building 2"
+                      />
+                    </div>
+                  )}
 
                   <div className="flex items-center space-x-2">
                     <Switch

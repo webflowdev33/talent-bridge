@@ -110,12 +110,127 @@ export type Database = {
           },
         ]
       }
+      candidate_evaluations: {
+        Row: {
+          application_id: string
+          created_at: string
+          evaluator_id: string
+          id: string
+          is_visible_to_candidate: boolean
+          overall_remarks: string | null
+          recommendation: string
+          round_number: number
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          evaluator_id: string
+          id?: string
+          is_visible_to_candidate?: boolean
+          overall_remarks?: string | null
+          recommendation?: string
+          round_number?: number
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          evaluator_id?: string
+          id?: string
+          is_visible_to_candidate?: boolean
+          overall_remarks?: string | null
+          recommendation?: string
+          round_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_evaluations_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_parameters: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          max_score: number
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_score?: number
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_score?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      evaluation_scores: {
+        Row: {
+          created_at: string
+          evaluation_id: string
+          id: string
+          parameter_id: string
+          remarks: string | null
+          score: number
+        }
+        Insert: {
+          created_at?: string
+          evaluation_id: string
+          id?: string
+          parameter_id: string
+          remarks?: string | null
+          score?: number
+        }
+        Update: {
+          created_at?: string
+          evaluation_id?: string
+          id?: string
+          parameter_id?: string
+          remarks?: string | null
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_scores_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_scores_parameter_id_fkey"
+            columns: ["parameter_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_parameters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_rounds: {
         Row: {
           created_at: string
           description: string | null
           id: string
+          instructions: string | null
           job_id: string
+          mode: string | null
           name: string
           round_number: number
         }
@@ -123,7 +238,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          instructions?: string | null
           job_id: string
+          mode?: string | null
           name: string
           round_number?: number
         }
@@ -131,7 +248,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          instructions?: string | null
           job_id?: string
+          mode?: string | null
           name?: string
           round_number?: number
         }
@@ -157,7 +276,6 @@ export type Database = {
           question_count: number | null
           requirements: string | null
           salary_range: string | null
-          test_time_minutes: number | null
           title: string
           total_rounds: number | null
           updated_at: string | null
@@ -173,7 +291,6 @@ export type Database = {
           question_count?: number | null
           requirements?: string | null
           salary_range?: string | null
-          test_time_minutes?: number | null
           title: string
           total_rounds?: number | null
           updated_at?: string | null
@@ -189,7 +306,6 @@ export type Database = {
           question_count?: number | null
           requirements?: string | null
           salary_range?: string | null
-          test_time_minutes?: number | null
           title?: string
           total_rounds?: number | null
           updated_at?: string | null
@@ -204,13 +320,16 @@ export type Database = {
           country: string | null
           created_at: string | null
           date_of_birth: string | null
+          education: Json | null
           email: string | null
+          experience: Json | null
           full_name: string | null
           guide_acknowledged: boolean | null
           id: string
           phone: string | null
           profile_completed: boolean | null
           resume_url: string | null
+          skills: string[] | null
           state: string | null
           updated_at: string | null
           user_id: string
@@ -223,13 +342,16 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           date_of_birth?: string | null
+          education?: Json | null
           email?: string | null
+          experience?: Json | null
           full_name?: string | null
           guide_acknowledged?: boolean | null
           id?: string
           phone?: string | null
           profile_completed?: boolean | null
           resume_url?: string | null
+          skills?: string[] | null
           state?: string | null
           updated_at?: string | null
           user_id: string
@@ -242,13 +364,16 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           date_of_birth?: string | null
+          education?: Json | null
           email?: string | null
+          experience?: Json | null
           full_name?: string | null
           guide_acknowledged?: boolean | null
           id?: string
           phone?: string | null
           profile_completed?: boolean | null
           resume_url?: string | null
+          skills?: string[] | null
           state?: string | null
           updated_at?: string | null
           user_id?: string
@@ -315,8 +440,11 @@ export type Database = {
           is_enabled: boolean | null
           job_id: string | null
           max_capacity: number | null
+          mode: string | null
+          round_number: number | null
           slot_date: string
           start_time: string
+          venue: string | null
         }
         Insert: {
           created_at?: string | null
@@ -326,8 +454,11 @@ export type Database = {
           is_enabled?: boolean | null
           job_id?: string | null
           max_capacity?: number | null
+          mode?: string | null
+          round_number?: number | null
           slot_date: string
           start_time: string
+          venue?: string | null
         }
         Update: {
           created_at?: string | null
@@ -337,8 +468,11 @@ export type Database = {
           is_enabled?: boolean | null
           job_id?: string | null
           max_capacity?: number | null
+          mode?: string | null
+          round_number?: number | null
           slot_date?: string
           start_time?: string
+          venue?: string | null
         }
         Relationships: [
           {
