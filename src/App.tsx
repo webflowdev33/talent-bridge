@@ -21,6 +21,7 @@ import SlotManagement from "./pages/admin/SlotManagement";
 import ApplicationManagement from "./pages/admin/ApplicationManagement";
 import QuestionManagement from "./pages/admin/QuestionManagement";
 import TestResults from "./pages/admin/TestResults";
+import EvaluationParameters from "./pages/admin/EvaluationParameters";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -98,6 +99,11 @@ const App = () => (
             <Route path="/admin/results" element={
               <ProtectedRoute requiredRole="admin">
                 <TestResults />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/evaluations" element={
+              <ProtectedRoute requiredRole="admin">
+                <EvaluationParameters />
               </ProtectedRoute>
             } />
 

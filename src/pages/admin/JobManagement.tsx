@@ -26,8 +26,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Briefcase, MapPin, DollarSign, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Briefcase, MapPin, Loader2 } from 'lucide-react';
 
 interface Job {
   id: string;
@@ -39,7 +46,6 @@ interface Job {
   requirements: string | null;
   total_rounds: number | null;
   question_count: number | null;
-  test_time_minutes: number | null;
   is_active: boolean | null;
   created_at: string | null;
 }
@@ -50,6 +56,8 @@ interface JobRound {
   round_number: number;
   name: string;
   description: string;
+  mode: string;
+  instructions: string;
 }
 
 interface JobFormData {
@@ -61,7 +69,6 @@ interface JobFormData {
   requirements: string;
   total_rounds: number;
   question_count: number;
-  test_time_minutes: number;
   is_active: boolean;
 }
 
@@ -74,9 +81,16 @@ const defaultFormData: JobFormData = {
   requirements: '',
   total_rounds: 1,
   question_count: 10,
-  test_time_minutes: 15,
   is_active: true,
 };
+
+const ROUND_MODES = [
+  { value: 'online_aptitude', label: 'Online Aptitude Test' },
+  { value: 'online_technical', label: 'Online Technical Test' },
+  { value: 'in_person', label: 'In-Person Test' },
+  { value: 'interview', label: 'Interview' },
+  { value: 'hr_round', label: 'HR Round' },
+];
 
 export default function JobManagement() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -125,14 +139,13 @@ export default function JobManagement() {
         requirements: job.requirements || '',
         total_rounds: job.total_rounds || 1,
         question_count: job.question_count || 10,
-        test_time_minutes: job.test_time_minutes || 15,
         is_active: job.is_active ?? true,
       });
 
       // Load existing rounds for this job
       supabase
         .from('job_rounds')
-        .select('id, job_id, round_number, name, description')
+        .select('id, job_id, round_number, name, description, mode, instructions')
         .eq('job_id', job.id)
         .order('round_number', { ascending: true })
         .then(({ data, error }) => {
@@ -144,6 +157,8 @@ export default function JobManagement() {
                 round_number: r.round_number,
                 name: r.name,
                 description: r.description || '',
+                mode: r.mode || 'online_aptitude',
+                instructions: r.instructions || '',
               }))
             );
           }
@@ -174,7 +189,6 @@ export default function JobManagement() {
             requirements: formData.requirements,
             total_rounds: formData.total_rounds,
             question_count: formData.question_count,
-            test_time_minutes: formData.test_time_minutes,
             is_active: formData.is_active,
           })
           .eq('id', selectedJob.id);
@@ -190,6 +204,8 @@ export default function JobManagement() {
               round_number: r.round_number,
               name: r.name,
               description: r.description,
+              mode: r.mode,
+              instructions: r.instructions,
             }))
           );
         }
@@ -207,7 +223,6 @@ export default function JobManagement() {
             requirements: formData.requirements,
             total_rounds: formData.total_rounds,
             question_count: formData.question_count,
-            test_time_minutes: formData.test_time_minutes,
             is_active: formData.is_active,
           })
           .select('id')
@@ -223,6 +238,8 @@ export default function JobManagement() {
               round_number: r.round_number,
               name: r.name,
               description: r.description,
+              mode: r.mode,
+              instructions: r.instructions,
             }))
           );
         }
@@ -379,7 +396,7 @@ export default function JobManagement() {
                               : 1;
                           setJobRounds([
                             ...jobRounds,
-                            { round_number: nextRound, name: `Round ${nextRound}`, description: '' },
+                            { round_number: nextRound, name: `Round ${nextRound}`, description: '', mode: 'online_aptitude', instructions: '' },
                           ]);
                         }}
                       >
@@ -414,22 +431,49 @@ export default function JobManagement() {
                                   }}
                                 />
                               </div>
-                              <div className="space-y-1">
-                                <Label className="text-xs text-muted-foreground">Name</Label>
-                                <Input
-                                  value={round.name}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    setJobRounds((prev) =>
-                                      prev.map((r, i) =>
-                                        i === idx ? { ...r, name: value } : r
-                                      )
-                                    );
-                                  }}
-                                  placeholder="e.g., Screening, Technical Interview, HR Round"
-                                />
+                              <div className="space-y-2 flex-1">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground">Name</Label>
+                                    <Input
+                                      value={round.name}
+                                      onChange={(e) => {
+                                        const value = e.target.value;
+                                        setJobRounds((prev) =>
+                                          prev.map((r, i) =>
+                                            i === idx ? { ...r, name: value } : r
+                                          )
+                                        );
+                                      }}
+                                      placeholder="e.g., Screening, Technical Interview"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground">Mode</Label>
+                                    <Select
+                                      value={round.mode}
+                                      onValueChange={(value) => {
+                                        setJobRounds((prev) =>
+                                          prev.map((r, i) =>
+                                            i === idx ? { ...r, mode: value } : r
+                                          )
+                                        );
+                                      }}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select mode" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {ROUND_MODES.map((mode) => (
+                                          <SelectItem key={mode.value} value={mode.value}>
+                                            {mode.label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
                                 <Textarea
-                                  className="mt-2"
                                   rows={2}
                                   value={round.description}
                                   onChange={(e) => {
@@ -441,6 +485,20 @@ export default function JobManagement() {
                                     );
                                   }}
                                   placeholder="Short description of what is evaluated in this round"
+                                />
+                                <Textarea
+                                  rows={2}
+                                  value={round.instructions}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    setJobRounds((prev) =>
+                                      prev.map((r, i) =>
+                                        i === idx ? { ...r, instructions: value } : r
+                                      )
+                                    );
+                                  }}
+                                  placeholder="Specific instructions for candidates (optional)"
+                                  className="text-sm"
                                 />
                               </div>
                               <div className="flex md:flex-col gap-2 justify-between md:justify-start md:items-end">
@@ -485,35 +543,19 @@ export default function JobManagement() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="question_count">Number of Questions to Display</Label>
-                      <Input
-                        id="question_count"
-                        type="number"
-                        min="1"
-                        max="100"
-                        value={formData.question_count}
-                        onChange={(e) => setFormData({ ...formData, question_count: parseInt(e.target.value) || 10 })}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Questions will be randomly selected from the pool during the test.
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="test_time_minutes">Test Duration (Minutes)</Label>
-                      <Input
-                        id="test_time_minutes"
-                        type="number"
-                        min="1"
-                        max="180"
-                        value={formData.test_time_minutes}
-                        onChange={(e) => setFormData({ ...formData, test_time_minutes: parseInt(e.target.value) || 15 })}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Test will auto-submit when time expires (e.g., 15 for 15 minutes).
-                      </p>
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="question_count">Number of Questions to Display</Label>
+                    <Input
+                      id="question_count"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={formData.question_count}
+                      onChange={(e) => setFormData({ ...formData, question_count: parseInt(e.target.value) || 10 })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Questions will be randomly selected from the pool during the test.
+                    </p>
                   </div>
 
                   <div className="space-y-2">

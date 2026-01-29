@@ -15,12 +15,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
+import { EducationSection, Education } from '@/components/profile/EducationSection';
+import { ExperienceSection, Experience } from '@/components/profile/ExperienceSection';
+import { SkillsSection } from '@/components/profile/SkillsSection';
 import { 
   User, 
-  Mail, 
   Phone, 
   MapPin, 
-  Calendar, 
   Upload,
   FileText,
   Loader2,
@@ -53,6 +54,9 @@ export default function Profile() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarPublicUrl, setAvatarPublicUrl] = useState<string | null>(null);
+  const [education, setEducation] = useState<Education[]>([]);
+  const [experience, setExperience] = useState<Experience[]>([]);
+  const [skills, setSkills] = useState<string[]>([]);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -108,6 +112,15 @@ export default function Profile() {
         });
         form.setValue('resume_url', data.resume_url || '');
         setAvatarUrl(data.avatar_url);
+        
+        // Load education, experience, and skills from JSONB/array fields
+        const educationData = (data.education as unknown) as Education[] | null;
+        const experienceData = (data.experience as unknown) as Experience[] | null;
+        const skillsData = data.skills as string[] | null;
+        
+        setEducation(Array.isArray(educationData) ? educationData : []);
+        setExperience(Array.isArray(experienceData) ? experienceData : []);
+        setSkills(Array.isArray(skillsData) ? skillsData : []);
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
@@ -143,6 +156,9 @@ export default function Profile() {
           country: data.country,
           zip_code: data.zip_code,
           resume_url: data.resume_url || null,
+          education: education as unknown as any,
+          experience: experience as unknown as any,
+          skills: skills,
           profile_completed: isComplete,
           updated_at: new Date().toISOString(),
         })
@@ -536,6 +552,15 @@ export default function Profile() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Education Section */}
+            <EducationSection education={education} onChange={setEducation} />
+
+            {/* Experience Section */}
+            <ExperienceSection experience={experience} onChange={setExperience} />
+
+            {/* Skills Section */}
+            <SkillsSection skills={skills} onChange={setSkills} />
 
             {/* Resume Link */}
             <Card className="border border-border shadow-md">
