@@ -318,50 +318,14 @@ export default function AdminDashboard() {
         </div>
 
         <Tabs defaultValue="dashboard" className="w-full">
-          {/* Sticky Quick Actions + Tabs */}
-          <div className="sticky top-0 z-10 -mx-4 px-4 py-3 mb-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <Button asChild variant="outline" size="sm" className="gap-1.5">
-                <Link to="/admin/jobs">
-                  <Briefcase className="h-3.5 w-3.5" />
-                  Jobs
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="sm" className="gap-1.5">
-                <Link to="/admin/slots">
-                  <Calendar className="h-3.5 w-3.5" />
-                  Slots
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="sm" className="gap-1.5">
-                <Link to="/admin/applications">
-                  <Users className="h-3.5 w-3.5" />
-                  Applications
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="sm" className="gap-1.5">
-                <Link to="/admin/questions">
-                  <ClipboardCheck className="h-3.5 w-3.5" />
-                  Questions
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="sm" className="gap-1.5">
-                <Link to="/admin/results">
-                  <FileText className="h-3.5 w-3.5" />
-                  Results
-                </Link>
-              </Button>
-            </div>
-
-            <TabsList>
-              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-              <TabsTrigger value="pipeline" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Pipeline
-              </TabsTrigger>
-              <TabsTrigger value="users">Users</TabsTrigger>
-            </TabsList>
-          </div>
+          <TabsList className="sticky top-0 z-10 mb-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border shadow-sm">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="pipeline" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Pipeline
+            </TabsTrigger>
+            <TabsTrigger value="users">Users</TabsTrigger>
+          </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
             {/* Stats Grid - Consolidated */}
