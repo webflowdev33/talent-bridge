@@ -312,13 +312,13 @@ export default function AdminDashboard() {
       <Header />
       
       <main className="flex-1 container py-8">
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
           <p className="text-muted-foreground">Manage jobs, applications, and tests</p>
         </div>
 
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="mb-6">
+          <TabsList className="sticky top-0 z-10 mb-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border shadow-sm">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="pipeline" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -327,214 +327,143 @@ export default function AdminDashboard() {
             <TabsTrigger value="users">Users</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dashboard" className="space-y-8">
-            {/* Stats Grid */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
+          <TabsContent value="dashboard" className="space-y-6">
+            {/* Stats Grid - Consolidated */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               {/* Total Users */}
-              <Card className="border-l-4 border-l-primary">
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Users</CardTitle>
+                  <Users className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalUsers}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Registered users
-                  </p>
+                  <p className="text-xs text-muted-foreground">Registered</p>
                 </CardContent>
               </Card>
 
-              {/* Total Jobs */}
-              <Card className="border-l-4 border-l-accent">
+              {/* Jobs */}
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Total Jobs</CardTitle>
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Jobs</CardTitle>
+                  <Briefcase className="h-4 w-4 text-accent" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalJobs}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats.activeJobs} active
-                  </p>
+                  <div className="text-2xl font-bold">{stats.activeJobs}<span className="text-sm font-normal text-muted-foreground">/{stats.totalJobs}</span></div>
+                  <p className="text-xs text-muted-foreground">Active / Total</p>
                 </CardContent>
               </Card>
 
-              {/* Total Applications */}
-              <Card className="border-l-4 border-l-warning">
+              {/* Applications */}
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Applications</CardTitle>
-                  <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
+                  <ClipboardCheck className="h-4 w-4 text-warning" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalApplications}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats.pendingApprovals} pending approval
-                  </p>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-warning">{stats.pendingApprovals} pending</span>
+                  </div>
                 </CardContent>
               </Card>
 
-            
-
-              {/* Test Slots */}
-              <Card className="border-l-4 border-l-primary">
+              {/* Slots */}
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Test Slots</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <Calendar className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalSlots}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats.availableSlots} available
-                  </p>
+                  <div className="text-2xl font-bold">{stats.availableSlots}<span className="text-sm font-normal text-muted-foreground">/{stats.totalSlots}</span></div>
+                  <p className="text-xs text-muted-foreground">Available / Total</p>
                 </CardContent>
               </Card>
+            </div>
 
-              {/* Tests Completed */}
-              <Card className="border-l-4 border-l-green-500">
+            {/* Test Results & Outcomes */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Tests Completed</CardTitle>
                   <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.testsCompleted}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats.testsPassed} passed, {stats.testsFailed} failed
-                  </p>
+                  <div className="flex gap-3 text-xs mt-1">
+                    <span className="text-success flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" /> {stats.testsPassed} passed
+                    </span>
+                    <span className="text-destructive flex items-center gap-1">
+                      <XCircle className="h-3 w-3" /> {stats.testsFailed} failed
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
 
-              {/* Tests Passed */}
-              <Card className="border-l-4 border-l-green-500">
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Tests Passed</CardTitle>
-                  <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Selected</CardTitle>
+                  <UserCheck className="h-4 w-4 text-success" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.testsPassed}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Successful attempts
-                  </p>
+                  <div className="text-2xl font-bold text-success">{stats.selectedCandidates}</div>
+                  <p className="text-xs text-muted-foreground">Final selections</p>
                 </CardContent>
               </Card>
 
-              {/* Tests Failed */}
-              <Card className="border-l-4 border-l-red-500">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Tests Failed</CardTitle>
-                  <XCircle className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.testsFailed}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Unsuccessful attempts
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Selected Candidates */}
-              <Card className="border-l-4 border-l-green-500">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Selected Candidates</CardTitle>
-                  <UserCheck className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.selectedCandidates}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Final selections
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Rejected Applications */}
-              <Card className="border-l-4 border-l-red-500">
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Rejected</CardTitle>
-                  <UserX className="h-4 w-4 text-muted-foreground" />
+                  <UserX className="h-4 w-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.rejectedApplications}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Rejected applications
-                  </p>
+                  <div className="text-2xl font-bold text-destructive">{stats.rejectedApplications}</div>
+                  <p className="text-xs text-muted-foreground">Rejected applications</p>
                 </CardContent>
               </Card>
             </div>
 
             {/* Quick Actions */}
-            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5 mb-8">
-              <Button asChild className="h-auto py-4 flex-col gap-2">
-                <Link to="/admin/jobs">
-                  <Briefcase className="h-5 w-5" />
-                  <span>Manage Jobs</span>
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
-                <Link to="/admin/slots">
-                  <Calendar className="h-5 w-5" />
-                  <span>Manage Slots</span>
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
-                <Link to="/admin/applications">
-                  <Users className="h-5 w-5" />
-                  <span>Applications</span>
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
-                <Link to="/admin/questions">
-                  <ClipboardCheck className="h-5 w-5" />
-                  <span>Questions</span>
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
-                <Link to="/admin/results">
-                  <FileText className="h-5 w-5" />
-                  <span>Test Results</span>
-                </Link>
-              </Button>
-            </div>
-
-            {/* Recent Applications */}
-            {/* <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Recent Applications</CardTitle>
-                  <CardDescription>Latest applications submitted by users</CardDescription>
-                </div>
-                <Button asChild variant="ghost" size="sm">
-                  <Link to="/admin/applications">
-                    View All <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent>
-                {recentApplications.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">No applications yet</p>
-                ) : (
-                  <div className="space-y-4">
-                    {recentApplications.map((app) => (
-                      <div key={app.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium">{app.profiles?.full_name || 'Unknown User'}</p>
-                          <p className="text-sm text-muted-foreground">{app.profiles?.email}</p>
-                        </div>
-                        <div className="flex-1 text-center">
-                          <p className="text-sm font-medium">{app.jobs?.title || 'Unknown Job'}</p>
-                          <p className="text-xs text-muted-foreground">Round {app.current_round}</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          {getStatusBadge(app.status, app.admin_approved)}
-                          <Button asChild size="sm" variant="ghost">
-                            <Link to={`/admin/applications/${app.id}`}>
-                              <ArrowRight className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className="grid gap-3 grid-cols-2 md:grid-cols-5">
+                  <Button asChild className="h-auto py-3 flex-col gap-1.5">
+                    <Link to="/admin/jobs">
+                      <Briefcase className="h-4 w-4" />
+                      <span className="text-xs">Jobs</span>
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
+                    <Link to="/admin/slots">
+                      <Calendar className="h-4 w-4" />
+                      <span className="text-xs">Slots</span>
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
+                    <Link to="/admin/applications">
+                      <Users className="h-4 w-4" />
+                      <span className="text-xs">Applications</span>
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
+                    <Link to="/admin/questions">
+                      <ClipboardCheck className="h-4 w-4" />
+                      <span className="text-xs">Questions</span>
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
+                    <Link to="/admin/results">
+                      <FileText className="h-4 w-4" />
+                      <span className="text-xs">Results</span>
+                    </Link>
+                  </Button>
+                </div>
               </CardContent>
-            </Card> */}
+            </Card>
           </TabsContent>
 
           <TabsContent value="pipeline" className="space-y-6">
@@ -549,7 +478,7 @@ export default function AdminDashboard() {
               <CardHeader>
                 <CardTitle>All Users</CardTitle>
                 <CardDescription>
-                  Manage and view all registered users in the system
+                  View all registered users
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -583,7 +512,7 @@ export default function AdminDashboard() {
                         <TableRow>
                           <TableHead>User</TableHead>
                           <TableHead>Contact</TableHead>
-                          <TableHead>Profile Status</TableHead>
+                          <TableHead>Profile</TableHead>
                           <TableHead>Applications</TableHead>
                           <TableHead>Joined</TableHead>
                         </TableRow>
@@ -593,62 +522,55 @@ export default function AdminDashboard() {
                           <TableRow key={user.id}>
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10">
+                                <Avatar className="h-9 w-9">
                                   <AvatarImage 
                                     src={user.avatarSignedUrl || user.avatar_url || undefined} 
                                     alt={user.full_name || 'User'} 
                                   />
-                                  <AvatarFallback className="bg-muted">
+                                  <AvatarFallback className="bg-muted text-xs">
                                     {user.full_name 
                                       ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-                                      : <User className="h-5 w-5 text-muted-foreground" />}
+                                      : <User className="h-4 w-4 text-muted-foreground" />}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <p className="font-medium">{user.full_name || 'Unknown User'}</p>
-                                  <p className="text-sm text-muted-foreground">ID: {user.user_id.slice(0, 8)}...</p>
+                                  <p className="font-medium text-sm">{user.full_name || 'Unknown'}</p>
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="space-y-1">
+                              <div className="space-y-0.5">
                                 {user.email && (
-                                  <div className="flex items-center gap-2 text-sm">
+                                  <div className="flex items-center gap-1.5 text-xs">
                                     <Mail className="h-3 w-3 text-muted-foreground" />
-                                    <span>{user.email}</span>
+                                    <span className="truncate max-w-[180px]">{user.email}</span>
                                   </div>
                                 )}
                                 {user.phone && (
-                                  <div className="flex items-center gap-2 text-sm">
+                                  <div className="flex items-center gap-1.5 text-xs">
                                     <Phone className="h-3 w-3 text-muted-foreground" />
                                     <span>{user.phone}</span>
                                   </div>
-                                )}
-                                {!user.email && !user.phone && (
-                                  <span className="text-sm text-muted-foreground">No contact info</span>
                                 )}
                               </div>
                             </TableCell>
                             <TableCell>
                               {user.profile_completed ? (
-                                <Badge className="bg-success text-success-foreground">Completed</Badge>
+                                <Badge className="bg-success text-success-foreground text-xs">Complete</Badge>
                               ) : (
-                                <Badge variant="outline">Incomplete</Badge>
+                                <Badge variant="outline" className="text-xs">Incomplete</Badge>
                               )}
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Briefcase className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">{user.applications_count || 0}</span>
-                              </div>
+                              <span className="font-medium">{user.applications_count || 0}</span>
                             </TableCell>
                             <TableCell>
                               {user.created_at ? (
-                                <span className="text-sm text-muted-foreground">
+                                <span className="text-xs text-muted-foreground">
                                   {format(new Date(user.created_at), 'MMM dd, yyyy')}
                                 </span>
                               ) : (
-                                <span className="text-sm text-muted-foreground">Unknown</span>
+                                <span className="text-xs text-muted-foreground">—</span>
                               )}
                             </TableCell>
                           </TableRow>
@@ -658,8 +580,8 @@ export default function AdminDashboard() {
                   </div>
                 )}
                 {filteredUsers.length > 0 && (
-                  <div className="mt-4 text-sm text-muted-foreground">
-                    Showing {filteredUsers.length} of {users.length} user(s)
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    Showing {filteredUsers.length} of {users.length} users
                   </div>
                 )}
               </CardContent>
