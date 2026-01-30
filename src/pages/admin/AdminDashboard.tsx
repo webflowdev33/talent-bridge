@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { HiringPipeline } from '@/components/admin/HiringPipeline';
+import { CandidateFunnel } from '@/components/admin/CandidateFunnel';
 import { 
   Briefcase, 
   Users, 
@@ -29,7 +31,8 @@ import {
   UserCheck,
   UserX,
   AlertCircle,
-  FileText
+  FileText,
+  BarChart3
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -317,6 +320,10 @@ export default function AdminDashboard() {
         <Tabs defaultValue="dashboard" className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="pipeline" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Pipeline
+            </TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
           </TabsList>
 
@@ -528,6 +535,13 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card> */}
+          </TabsContent>
+
+          <TabsContent value="pipeline" className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <CandidateFunnel />
+            </div>
+            <HiringPipeline />
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
