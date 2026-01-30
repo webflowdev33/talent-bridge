@@ -57,8 +57,10 @@ import {
   Briefcase,
   Ban,
   Calendar,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Star
 } from 'lucide-react';
+import { EvaluateDialog } from '@/components/admin/EvaluateDialog';
 import { format } from 'date-fns';
 
 interface TestAttempt {
@@ -121,6 +123,8 @@ export default function ApplicationManagement() {
   const [jobs, setJobs] = useState<Array<{ id: string; title: string }>>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [avatarUrls, setAvatarUrls] = useState<Map<string, string>>(new Map());
+  const [evaluateDialogOpen, setEvaluateDialogOpen] = useState(false);
+  const [applicationToEvaluate, setApplicationToEvaluate] = useState<Application | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -880,6 +884,13 @@ export default function ApplicationManagement() {
                                             Mark as Passed
                                           </DropdownMenuItem>
                                         )}
+                                        <DropdownMenuItem onClick={() => {
+                                          setApplicationToEvaluate(app);
+                                          setEvaluateDialogOpen(true);
+                                        }}>
+                                          <Star className="mr-2 h-4 w-4 text-primary" />
+                                          Evaluate Candidate
+                                        </DropdownMenuItem>
                                       </>
                                     )}
                                     {app.admin_approved && app.status === 'passed' && (
@@ -1033,6 +1044,13 @@ export default function ApplicationManagement() {
                                     Mark as Passed
                                   </DropdownMenuItem>
                                 )}
+                                <DropdownMenuItem onClick={() => {
+                                  setApplicationToEvaluate(app);
+                                  setEvaluateDialogOpen(true);
+                                }}>
+                                  <Star className="mr-2 h-4 w-4 text-primary" />
+                                  Evaluate Candidate
+                                </DropdownMenuItem>
                               </>
                             )}
                             {app.admin_approved && app.status === 'passed' && (
@@ -1317,6 +1335,17 @@ export default function ApplicationManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Evaluate Dialog */}
+      <EvaluateDialog
+        open={evaluateDialogOpen}
+        onOpenChange={setEvaluateDialogOpen}
+        application={applicationToEvaluate}
+        onEvaluationComplete={() => {
+          setApplicationToEvaluate(null);
+          fetchApplications();
+        }}
+      />
 
       <Footer />
     </div>
