@@ -69,10 +69,7 @@ export default function Guide() {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({
-          guide_acknowledged: true,
-          guide_acknowledged_at: new Date().toISOString(),
-        })
+        .update({ guide_acknowledged: true })
         .eq('user_id', user.id);
 
       if (error) throw error;
