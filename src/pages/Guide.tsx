@@ -43,16 +43,9 @@ export default function Guide() {
 
         if (data?.guide_acknowledged) {
           setAlreadyAcknowledged(true);
-          // If view mode, allow viewing. Otherwise redirect
-          if (viewMode) {
-            setCheckingStatus(false);
-          } else {
-            // Already acknowledged and not in view mode, redirect to profile
-            navigate('/profile');
-          }
-        } else {
-          setCheckingStatus(false);
+          setIsViewOnly(true); // Already acknowledged, show in view-only mode
         }
+        setCheckingStatus(false);
       } catch (error: any) {
         console.error('Error checking acknowledgment status:', error);
         setCheckingStatus(false);
