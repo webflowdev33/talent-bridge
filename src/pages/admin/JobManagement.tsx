@@ -81,7 +81,7 @@ const defaultFormData: JobFormData = {
   requirements: '',
   total_rounds: 1,
   question_count: 10,
-  is_active: true,
+  is_active: false,
 };
 
 const ROUND_MODES = [
