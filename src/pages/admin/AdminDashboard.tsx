@@ -185,17 +185,30 @@ export default function AdminDashboard() {
       });
 
       // Fetch recent applications
-      const { data: applications } = await supabase
+      const { data: appData } = await supabase
         .from('applications')
         .select(`
           *,
-          jobs:job_id (title),
-          profiles:user_id (full_name, email)
+          jobs:job_id (title)
         `)
         .order('created_at', { ascending: false })
         .limit(5);
 
-      setRecentApplications(applications || []);
+      // Fetch profiles separately
+      const appUserIds = [...new Set((appData || []).map(a => a.user_id))];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email')
+        .in('user_id', appUserIds);
+
+      const profilesMap = new Map((profilesData || []).map(p => [p.user_id, p]));
+
+      const enrichedApps = (appData || []).map(app => ({
+        ...app,
+        profiles: profilesMap.get(app.user_id) || null,
+      }));
+
+      setRecentApplications(enrichedApps);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
