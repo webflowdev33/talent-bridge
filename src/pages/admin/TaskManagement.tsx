@@ -43,8 +43,11 @@ import {
   Shuffle,
   Users,
   Clock,
-  FileText
+  FileText,
+  Eye,
+  Edit3
 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Job {
   id: string;
@@ -105,6 +108,7 @@ export default function TaskManagement() {
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
   const [assignMode, setAssignMode] = useState<'manual' | 'random'>('manual');
   const [randomCount, setRandomCount] = useState(5);
+  const [previewMode, setPreviewMode] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -183,6 +187,7 @@ export default function TaskManagement() {
       setSelectedTask(null);
       setFormData(defaultFormData);
     }
+    setPreviewMode(false);
     setDialogOpen(true);
   };
 
@@ -480,89 +485,172 @@ export default function TaskManagement() {
 
       {/* Create/Edit Task Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <form onSubmit={handleSubmit}>
             <DialogHeader>
-              <DialogTitle>{selectedTask ? 'Edit Task' : 'Create New Task'}</DialogTitle>
-              <DialogDescription>
-                {selectedTask ? 'Update task details' : 'Create a task with rich description to assign to candidates'}
-              </DialogDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle>{selectedTask ? 'Edit Task' : 'Create New Task'}</DialogTitle>
+                  <DialogDescription>
+                    {selectedTask ? 'Update task details' : 'Create a task with rich description to assign to candidates'}
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
-            
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="job">Job *</Label>
-                <Select
-                  value={formData.job_id}
-                  onValueChange={(value) => setFormData({ ...formData, job_id: value })}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a job" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {jobs.map(job => (
-                      <SelectItem key={job.id} value={job.id}>{job.title}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="title">Task Title *</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g., Create Landing Page from Figma Design"
-                  required
-                />
-              </div>
+            {/* Edit/Preview Toggle */}
+            <Tabs value={previewMode ? 'preview' : 'edit'} onValueChange={(v) => setPreviewMode(v === 'preview')} className="mt-4">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="edit" className="flex items-center gap-2">
+                  <Edit3 className="h-4 w-4" />
+                  Edit
+                </TabsTrigger>
+                <TabsTrigger value="preview" className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  Preview
+                </TabsTrigger>
+              </TabsList>
 
-              <div className="space-y-2">
-                <Label htmlFor="estimated_hours">Estimated Hours</Label>
-                <Input
-                  id="estimated_hours"
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={formData.estimated_hours}
-                  onChange={(e) => setFormData({ ...formData, estimated_hours: parseInt(e.target.value) || 4 })}
-                />
-              </div>
+              <TabsContent value="edit" className="mt-0">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="job">Job *</Label>
+                    <Select
+                      value={formData.job_id}
+                      onValueChange={(value) => setFormData({ ...formData, job_id: value })}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a job" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {jobs.map(job => (
+                          <SelectItem key={job.id} value={job.id}>{job.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">
-                  Task Description * <span className="text-xs text-muted-foreground">(Format text, add links & images)</span>
-                </Label>
-                <RichTextEditor
-                  value={formData.description}
-                  onChange={(value) => setFormData({ ...formData, description: value })}
-                  placeholder="Describe the task requirements, add Figma links, reference images..."
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Task Title *</Label>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      placeholder="e.g., Create Landing Page from Figma Design"
+                      required
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="instructions">Additional Instructions (Optional)</Label>
-                <RichTextEditor
-                  value={formData.instructions}
-                  onChange={(value) => setFormData({ ...formData, instructions: value })}
-                  placeholder="Any additional notes, resources, or guidance..."
-                  className="min-h-[120px]"
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="estimated_hours">Estimated Hours</Label>
+                    <Input
+                      id="estimated_hours"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={formData.estimated_hours}
+                      onChange={(e) => setFormData({ ...formData, estimated_hours: parseInt(e.target.value) || 4 })}
+                    />
+                  </div>
 
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                />
-                <Label htmlFor="is_active">Active (can be assigned)</Label>
-              </div>
-            </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">
+                      Task Description * <span className="text-xs text-muted-foreground">(Format text, add links & images)</span>
+                    </Label>
+                    <RichTextEditor
+                      value={formData.description}
+                      onChange={(value) => setFormData({ ...formData, description: value })}
+                      placeholder="Describe the task requirements, add Figma links, reference images..."
+                    />
+                  </div>
 
-            <DialogFooter>
+                  <div className="space-y-2">
+                    <Label htmlFor="instructions">Additional Instructions (Optional)</Label>
+                    <RichTextEditor
+                      value={formData.instructions}
+                      onChange={(value) => setFormData({ ...formData, instructions: value })}
+                      placeholder="Any additional notes, resources, or guidance..."
+                      className="min-h-[120px]"
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="is_active"
+                      checked={formData.is_active}
+                      onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                    />
+                    <Label htmlFor="is_active">Active (can be assigned)</Label>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="preview" className="mt-0">
+                <div className="border rounded-lg bg-muted/30 p-6 space-y-6">
+                  {/* Preview Header */}
+                  <div className="border-b pb-4">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                      Task Preview - What candidates will see
+                    </p>
+                    <h2 className="text-2xl font-bold text-foreground">
+                      {formData.title || 'Task Title'}
+                    </h2>
+                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <FileText className="h-4 w-4" />
+                        {jobs.find(j => j.id === formData.job_id)?.title || 'No job selected'}
+                      </span>
+                      {formData.estimated_hours > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          Est. {formData.estimated_hours} hours
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Description Preview */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                      Task Description
+                    </h3>
+                    {formData.description ? (
+                      <div 
+                        className="prose prose-sm dark:prose-invert max-w-none bg-background p-4 rounded-lg border"
+                        dangerouslySetInnerHTML={{ __html: formData.description }}
+                      />
+                    ) : (
+                      <p className="text-muted-foreground italic p-4 bg-background rounded-lg border">
+                        No description provided yet
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Instructions Preview */}
+                  {formData.instructions && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                        Additional Instructions
+                      </h3>
+                      <div 
+                        className="prose prose-sm dark:prose-invert max-w-none bg-background p-4 rounded-lg border"
+                        dangerouslySetInnerHTML={{ __html: formData.instructions }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Status Preview */}
+                  <div className="pt-4 border-t">
+                    <Badge variant={formData.is_active ? 'default' : 'secondary'}>
+                      {formData.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <DialogFooter className="mt-6">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
