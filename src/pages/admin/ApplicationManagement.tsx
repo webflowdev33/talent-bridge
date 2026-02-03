@@ -550,17 +550,6 @@ export default function ApplicationManagement() {
     </div>
   );
 
-  const RoundColumn = ({ round, apps }: { round: number; apps: Application[] }) => (
-    <div className="space-y-2">
-      {apps.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground text-sm border border-dashed rounded-lg">
-          No candidates
-        </div>
-      ) : (
-        apps.map(app => <CandidateCard key={app.id} app={app} />)
-      )}
-    </div>
-  );
 
   if (loading) {
     return (
@@ -644,12 +633,8 @@ export default function ApplicationManagement() {
         </Card>
 
         {/* Main Tabs */}
-        <Tabs defaultValue="pipeline" className="space-y-4">
+        <Tabs defaultValue="pending" className="space-y-4">
           <TabsList className="bg-background border h-auto p-1 flex-wrap">
-            <TabsTrigger value="pipeline" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Users className="h-3.5 w-3.5" />
-              Pipeline View
-            </TabsTrigger>
             <TabsTrigger value="pending" className="gap-1.5">
               <Clock className="h-3.5 w-3.5" />
               Pending ({categorizedApps.pending.length})
@@ -669,62 +654,6 @@ export default function ApplicationManagement() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Pipeline View - Kanban style */}
-          <TabsContent value="pipeline" className="mt-4">
-            <ScrollArea className="w-full">
-              <div className="flex gap-4 pb-4 min-w-max">
-                {/* Pending Column */}
-                <div className="w-[300px] shrink-0">
-                  <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-warning/10">
-                    <Clock className="h-4 w-4 text-warning" />
-                    <span className="font-medium text-sm">Pending Approval</span>
-                    <Badge variant="secondary" className="ml-auto text-xs">{categorizedApps.pending.length}</Badge>
-                  </div>
-                  <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
-                    <RoundColumn round={0} apps={categorizedApps.pending} />
-                  </div>
-                </div>
-
-                {/* Round Columns */}
-                {Array.from({ length: maxRounds }).map((_, i) => (
-                  <div key={i + 1} className="w-[300px] shrink-0">
-                    <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-primary/10">
-                      <span className="h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">{i + 1}</span>
-                      <span className="font-medium text-sm">Round {i + 1}</span>
-                      <Badge variant="secondary" className="ml-auto text-xs">{categorizedApps.byRound[i + 1]?.length || 0}</Badge>
-                    </div>
-                    <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
-                      <RoundColumn round={i + 1} apps={categorizedApps.byRound[i + 1] || []} />
-                    </div>
-                  </div>
-                ))}
-
-                {/* Selected Column */}
-                <div className="w-[300px] shrink-0">
-                  <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-success/10">
-                    <CheckCircle className="h-4 w-4 text-success" />
-                    <span className="font-medium text-sm">Selected</span>
-                    <Badge variant="secondary" className="ml-auto text-xs">{categorizedApps.selected.length}</Badge>
-                  </div>
-                  <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
-                    {categorizedApps.selected.map(app => <CandidateCard key={app.id} app={app} showRoundActions={false} />)}
-                  </div>
-                </div>
-
-                {/* Rejected Column */}
-                <div className="w-[300px] shrink-0">
-                  <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-destructive/10">
-                    <XCircle className="h-4 w-4 text-destructive" />
-                    <span className="font-medium text-sm">Rejected</span>
-                    <Badge variant="secondary" className="ml-auto text-xs">{categorizedApps.rejected.length}</Badge>
-                  </div>
-                  <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
-                    {categorizedApps.rejected.map(app => <CandidateCard key={app.id} app={app} showRoundActions={false} />)}
-                  </div>
-                </div>
-              </div>
-            </ScrollArea>
-          </TabsContent>
 
           {/* Pending Tab */}
           <TabsContent value="pending">
