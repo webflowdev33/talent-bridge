@@ -70,6 +70,27 @@ interface TestAttempt {
   ended_at: string | null;
 }
 
+interface EvaluationScore {
+  id: string;
+  score: number;
+  remarks: string | null;
+  parameter: {
+    id: string;
+    name: string;
+    max_score: number;
+  };
+}
+
+interface Evaluation {
+  id: string;
+  round_number: number;
+  recommendation: string;
+  overall_remarks: string | null;
+  is_visible_to_candidate: boolean;
+  created_at: string;
+  scores: EvaluationScore[];
+}
+
 interface Application {
   id: string;
   user_id: string;
@@ -120,12 +141,75 @@ export default function ApplicationManagement() {
   const [appToDelete, setAppToDelete] = useState<Application | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [avatarUrls, setAvatarUrls] = useState<Map<string, string>>(new Map());
+  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
+  const [evaluationsLoading, setEvaluationsLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchApplications();
     fetchJobs();
   }, []);
+
+  // Fetch evaluations when opening details
+  useEffect(() => {
+    if (detailsOpen && selectedApp) {
+      fetchEvaluations(selectedApp.id);
+    } else {
+      setEvaluations([]);
+    }
+  }, [detailsOpen, selectedApp?.id]);
+
+  const fetchEvaluations = async (applicationId: string) => {
+    setEvaluationsLoading(true);
+    try {
+      const { data: evalData, error: evalError } = await supabase
+        .from('candidate_evaluations')
+        .select('id, round_number, recommendation, overall_remarks, is_visible_to_candidate, created_at')
+        .eq('application_id', applicationId)
+        .order('round_number', { ascending: true });
+
+      if (evalError) throw evalError;
+
+      if (!evalData || evalData.length === 0) {
+        setEvaluations([]);
+        return;
+      }
+
+      const evalIds = evalData.map(e => e.id);
+      const { data: scoresData, error: scoresError } = await supabase
+        .from('evaluation_scores')
+        .select('id, evaluation_id, score, remarks, parameter_id')
+        .in('evaluation_id', evalIds);
+
+      if (scoresError) throw scoresError;
+
+      const paramIds = [...new Set((scoresData || []).map(s => s.parameter_id))];
+      const { data: paramsData } = await supabase
+        .from('evaluation_parameters')
+        .select('id, name, max_score')
+        .in('id', paramIds);
+
+      const paramsMap = new Map((paramsData || []).map(p => [p.id, p]));
+
+      const evaluationsWithScores: Evaluation[] = evalData.map(ev => ({
+        ...ev,
+        scores: (scoresData || [])
+          .filter(s => s.evaluation_id === ev.id)
+          .map(s => ({
+            id: s.id,
+            score: s.score,
+            remarks: s.remarks,
+            parameter: paramsMap.get(s.parameter_id) || { id: s.parameter_id, name: 'Unknown', max_score: 10 }
+          }))
+      }));
+
+      setEvaluations(evaluationsWithScores);
+    } catch (error) {
+      console.error('Error fetching evaluations:', error);
+    } finally {
+      setEvaluationsLoading(false);
+    }
+  };
 
   const fetchJobs = async () => {
     const { data } = await supabase
@@ -820,6 +904,96 @@ export default function ApplicationManagement() {
                       );
                     })}
                   </div>
+                </div>
+
+                <Separator />
+
+                {/* Evaluations Section */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Evaluations</h4>
+                  {evaluationsLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : evaluations.length === 0 ? (
+                    <div className="text-center py-4 text-sm text-muted-foreground border border-dashed rounded-lg">
+                      No evaluations yet
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {evaluations.map(evaluation => {
+                        const totalScore = evaluation.scores.reduce((sum, s) => sum + s.score, 0);
+                        const maxScore = evaluation.scores.reduce((sum, s) => sum + s.parameter.max_score, 0);
+                        const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+
+                        return (
+                          <div key={evaluation.id} className="border rounded-lg overflow-hidden">
+                            {/* Round Header */}
+                            <div className={`px-3 py-2 flex items-center justify-between ${
+                              evaluation.recommendation === 'pass' ? 'bg-success/10' :
+                              evaluation.recommendation === 'fail' ? 'bg-destructive/10' : 'bg-warning/10'
+                            }`}>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm">Round {evaluation.round_number}</span>
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-xs ${
+                                    evaluation.recommendation === 'pass' ? 'border-success text-success' :
+                                    evaluation.recommendation === 'fail' ? 'border-destructive text-destructive' : 'border-warning text-warning'
+                                  }`}
+                                >
+                                  {evaluation.recommendation.toUpperCase()}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold">{totalScore}/{maxScore}</span>
+                                <Badge variant="secondary" className="text-xs">{percentage}%</Badge>
+                              </div>
+                            </div>
+
+                            {/* Scores */}
+                            <div className="p-3 space-y-2">
+                              {evaluation.scores.map(score => (
+                                <div key={score.id} className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">{score.parameter.name}</span>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
+                                      <div 
+                                        className="h-full bg-primary rounded-full" 
+                                        style={{ width: `${(score.score / score.parameter.max_score) * 100}%` }}
+                                      />
+                                    </div>
+                                    <span className="font-medium w-12 text-right">{score.score}/{score.parameter.max_score}</span>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Overall Remarks */}
+                              {evaluation.overall_remarks && (
+                                <div className="mt-3 pt-2 border-t">
+                                  <p className="text-xs text-muted-foreground mb-1">Remarks:</p>
+                                  <p className="text-sm">{evaluation.overall_remarks}</p>
+                                </div>
+                              )}
+
+                              {/* Visibility indicator */}
+                              <div className="flex items-center gap-1 mt-2 pt-2 border-t text-xs text-muted-foreground">
+                                {evaluation.is_visible_to_candidate ? (
+                                  <>
+                                    <Eye className="h-3 w-3" />
+                                    <span>Visible to candidate</span>
+                                  </>
+                                ) : (
+                                  <span>Hidden from candidate</span>
+                                )}
+                                <span className="ml-auto">{format(new Date(evaluation.created_at), 'MMM d, yyyy')}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Applied Date */}
