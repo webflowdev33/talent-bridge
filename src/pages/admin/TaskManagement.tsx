@@ -5,6 +5,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -532,42 +533,22 @@ export default function TaskManagement() {
 
               <div className="space-y-2">
                 <Label htmlFor="description">
-                  Task Description * <span className="text-xs text-muted-foreground">(Rich text supported - use markdown)</span>
+                  Task Description * <span className="text-xs text-muted-foreground">(Format text, add links & images)</span>
                 </Label>
-                <Textarea
-                  id="description"
+                <RichTextEditor
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder={`## Task Overview
-Recreate the landing page as per the provided Figma design.
-
-## Requirements
-- Responsive design (mobile, tablet, desktop)
-- Pixel-perfect implementation
-- Use React/Next.js with Tailwind CSS
-- Include animations as shown in the design
-
-## Deliverables
-1. GitHub repository link
-2. Live deployed URL
-3. Brief documentation of approach`}
-                  rows={12}
-                  className="font-mono text-sm"
-                  required
+                  onChange={(value) => setFormData({ ...formData, description: value })}
+                  placeholder="Describe the task requirements, add Figma links, reference images..."
                 />
-                <p className="text-xs text-muted-foreground">
-                  Use markdown formatting: ## for headings, - for lists, **bold**, *italic*
-                </p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="instructions">Additional Instructions (Optional)</Label>
-                <Textarea
-                  id="instructions"
+                <RichTextEditor
                   value={formData.instructions}
-                  onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                  placeholder="Any additional instructions or resources links..."
-                  rows={4}
+                  onChange={(value) => setFormData({ ...formData, instructions: value })}
+                  placeholder="Any additional notes, resources, or guidance..."
+                  className="min-h-[120px]"
                 />
               </div>
 
