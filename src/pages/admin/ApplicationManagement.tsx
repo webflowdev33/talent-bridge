@@ -432,122 +432,162 @@ export default function ApplicationManagement() {
     return <Badge variant="outline" className="text-xs">Approved</Badge>;
   };
 
-  const CandidateCard = ({ app, showRoundActions = true }: { app: Application; showRoundActions?: boolean }) => (
+  const CandidateRow = ({ app, showRoundActions = true }: { app: Application; showRoundActions?: boolean }) => (
     <div 
-      className="p-3 bg-card border rounded-lg hover:shadow-md transition-all cursor-pointer group"
+      className="flex items-center gap-4 p-3 bg-card border-b last:border-b-0 hover:bg-muted/50 transition-colors cursor-pointer"
       onClick={() => { setSelectedApp(app); setDetailsOpen(true); }}
     >
-      <div className="flex items-start gap-3">
-        <Avatar className="h-10 w-10 shrink-0">
+      {/* Avatar & Name */}
+      <div className="flex items-center gap-3 min-w-[200px] flex-1">
+        <Avatar className="h-9 w-9 shrink-0">
           <AvatarImage src={avatarUrls.get(app.user_id)} />
           <AvatarFallback className="text-xs font-medium">
             {app.profiles?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
           </AvatarFallback>
         </Avatar>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <p className="font-medium text-sm truncate">{app.profiles?.full_name || 'Unknown'}</p>
-            {getStatusBadge(app)}
-          </div>
+        <div className="min-w-0">
+          <p className="font-medium text-sm truncate">{app.profiles?.full_name || 'Unknown'}</p>
           <p className="text-xs text-muted-foreground truncate">{app.profiles?.email}</p>
-          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-            <Badge variant="secondary" className="text-xs px-1.5 py-0">
-              {app.jobs?.title || 'Job'}
-            </Badge>
-            {app.slots && (
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {format(new Date(app.slots.slot_date), 'MMM d')}
-              </span>
-            )}
-          </div>
         </div>
       </div>
-      
-      {/* Quick Actions */}
-      <div className="flex items-center gap-1 mt-3 pt-2 border-t" onClick={e => e.stopPropagation()}>
+
+      {/* Job */}
+      <div className="hidden md:block w-[140px]">
+        <Badge variant="secondary" className="text-xs truncate max-w-full">
+          {app.jobs?.title || 'Job'}
+        </Badge>
+      </div>
+
+      {/* Round */}
+      <div className="hidden lg:flex items-center gap-1.5 w-[80px]">
+        <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">
+          {app.current_round || 1}
+        </span>
+        <span className="text-xs text-muted-foreground">/ {app.jobs?.total_rounds || 1}</span>
+      </div>
+
+      {/* Status */}
+      <div className="w-[90px]">
+        {getStatusBadge(app)}
+      </div>
+
+      {/* Date */}
+      <div className="hidden sm:block w-[80px] text-xs text-muted-foreground">
+        {app.created_at ? format(new Date(app.created_at), 'MMM d') : '-'}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
         {!app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && (
           <>
             <Button 
               size="sm" 
               variant="ghost" 
-              className="h-7 px-2 text-xs text-success hover:text-success hover:bg-success/10"
+              className="h-8 w-8 p-0 text-success hover:text-success hover:bg-success/10"
               onClick={() => handleApprove(app)}
               disabled={actionLoading === app.id}
+              title="Approve"
             >
-              {actionLoading === app.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3 mr-1" />}
-              Approve
+              {actionLoading === app.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
             </Button>
             <Button 
               size="sm" 
               variant="ghost" 
-              className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={() => handleReject(app)}
               disabled={actionLoading === app.id}
+              title="Reject"
             >
-              <XCircle className="h-3 w-3 mr-1" />
-              Reject
+              <XCircle className="h-4 w-4" />
             </Button>
           </>
         )}
         
         {showRoundActions && app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && (
           <>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <span>Test</span>
-              <Switch
-                checked={app.test_enabled ?? false}
-                onCheckedChange={() => handleEnableTest(app)}
-                disabled={actionLoading === app.id}
-                className="scale-75"
-              />
-            </div>
+            <Button 
+              size="sm" 
+              variant={app.test_enabled ? "default" : "ghost"}
+              className={`h-8 px-2 text-xs ${app.test_enabled ? 'bg-primary' : ''}`}
+              onClick={() => handleEnableTest(app)}
+              disabled={actionLoading === app.id}
+              title={app.test_enabled ? 'Disable Test' : 'Enable Test'}
+            >
+              {app.test_enabled ? 'Testing' : 'Test'}
+            </Button>
             <Button 
               size="sm" 
               variant="ghost" 
-              className="h-7 px-2 text-xs"
+              className="h-8 w-8 p-0"
               onClick={() => { setSelectedApp(app); setEvaluateOpen(true); }}
+              title="Evaluate"
             >
-              <Star className="h-3 w-3 mr-1" />
-              Evaluate
+              <Star className="h-4 w-4" />
             </Button>
             {app.status === 'passed' && (
               <Button 
                 size="sm" 
-                variant="ghost" 
-                className="h-7 px-2 text-xs text-primary"
+                variant="outline"
+                className="h-8 px-2 text-xs text-primary border-primary"
                 onClick={() => handleMoveToNextRound(app)}
                 disabled={actionLoading === app.id}
               >
-                <ArrowUpRight className="h-3 w-3 mr-1" />
-                {(app.current_round || 1) >= (app.jobs?.total_rounds || 1) ? 'Select' : 'Next Round'}
+                <ArrowUpRight className="h-3.5 w-3.5 mr-1" />
+                {(app.current_round || 1) >= (app.jobs?.total_rounds || 1) ? 'Select' : 'Next'}
               </Button>
             )}
           </>
         )}
 
-        <div className="ml-auto flex items-center gap-1">
-          {app.profiles?.resume_url && (
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              className="h-7 w-7 p-0"
-              onClick={() => handleViewResume(app.profiles!.resume_url!)}
-            >
-              <FileText className="h-3.5 w-3.5" />
-            </Button>
-          )}
+        {app.profiles?.resume_url && (
           <Button 
             size="sm" 
             variant="ghost" 
-            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-            onClick={() => { setAppToDelete(app); setDeleteOpen(true); }}
+            className="h-8 w-8 p-0"
+            onClick={() => handleViewResume(app.profiles!.resume_url!)}
+            title="View Resume"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <FileText className="h-4 w-4" />
           </Button>
-        </div>
+        )}
+        <Button 
+          size="sm" 
+          variant="ghost" 
+          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+          onClick={() => { setAppToDelete(app); setDeleteOpen(true); }}
+          title="Delete"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
     </div>
+  );
+
+  const CandidateList = ({ apps, showRoundActions = true, emptyMessage = "No candidates" }: { 
+    apps: Application[]; 
+    showRoundActions?: boolean;
+    emptyMessage?: string;
+  }) => (
+    <Card>
+      {apps.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          {emptyMessage}
+        </div>
+      ) : (
+        <div className="divide-y">
+          {/* Header */}
+          <div className="flex items-center gap-4 px-3 py-2 bg-muted/50 text-xs font-medium text-muted-foreground">
+            <div className="min-w-[200px] flex-1">Candidate</div>
+            <div className="hidden md:block w-[140px]">Job</div>
+            <div className="hidden lg:block w-[80px]">Round</div>
+            <div className="w-[90px]">Status</div>
+            <div className="hidden sm:block w-[80px]">Applied</div>
+            <div className="w-[180px] text-right">Actions</div>
+          </div>
+          {apps.map(app => <CandidateRow key={app.id} app={app} showRoundActions={showRoundActions} />)}
+        </div>
+      )}
+    </Card>
   );
 
 
@@ -657,52 +697,24 @@ export default function ApplicationManagement() {
 
           {/* Pending Tab */}
           <TabsContent value="pending">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {categorizedApps.pending.map(app => <CandidateCard key={app.id} app={app} />)}
-              {categorizedApps.pending.length === 0 && (
-                <div className="col-span-full text-center py-12 text-muted-foreground">
-                  No pending applications
-                </div>
-              )}
-            </div>
+            <CandidateList apps={categorizedApps.pending} emptyMessage="No pending applications" />
           </TabsContent>
 
           {/* Round Tabs */}
           {Array.from({ length: maxRounds }).map((_, i) => (
             <TabsContent key={i + 1} value={`round-${i + 1}`}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {(categorizedApps.byRound[i + 1] || []).map(app => <CandidateCard key={app.id} app={app} />)}
-                {(categorizedApps.byRound[i + 1]?.length || 0) === 0 && (
-                  <div className="col-span-full text-center py-12 text-muted-foreground">
-                    No candidates in Round {i + 1}
-                  </div>
-                )}
-              </div>
+              <CandidateList apps={categorizedApps.byRound[i + 1] || []} emptyMessage={`No candidates in Round ${i + 1}`} />
             </TabsContent>
           ))}
 
           {/* Selected Tab */}
           <TabsContent value="selected">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {categorizedApps.selected.map(app => <CandidateCard key={app.id} app={app} showRoundActions={false} />)}
-              {categorizedApps.selected.length === 0 && (
-                <div className="col-span-full text-center py-12 text-muted-foreground">
-                  No selected candidates yet
-                </div>
-              )}
-            </div>
+            <CandidateList apps={categorizedApps.selected} showRoundActions={false} emptyMessage="No selected candidates yet" />
           </TabsContent>
 
           {/* Rejected Tab */}
           <TabsContent value="rejected">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {categorizedApps.rejected.map(app => <CandidateCard key={app.id} app={app} showRoundActions={false} />)}
-              {categorizedApps.rejected.length === 0 && (
-                <div className="col-span-full text-center py-12 text-muted-foreground">
-                  No rejected candidates
-                </div>
-              )}
-            </div>
+            <CandidateList apps={categorizedApps.rejected} showRoundActions={false} emptyMessage="No rejected candidates" />
           </TabsContent>
         </Tabs>
       </main>
