@@ -15,6 +15,7 @@ import Jobs from "./pages/Jobs";
 import JobDetails from "./pages/JobDetails";
 import SelectSlot from "./pages/SelectSlot";
 import Test from "./pages/Test";
+import MyTasks from "./pages/MyTasks";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import JobManagement from "./pages/admin/JobManagement";
 import SlotManagement from "./pages/admin/SlotManagement";
@@ -68,6 +69,11 @@ const App = () => (
             <Route path="/test/:applicationId" element={
               <ProtectedRoute>
                 <Test />
+              </ProtectedRoute>
+            } />
+            <Route path="/my-tasks" element={
+              <ProtectedRoute>
+                <MyTasks />
               </ProtectedRoute>
             } />
 
