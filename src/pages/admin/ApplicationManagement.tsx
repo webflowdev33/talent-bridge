@@ -324,6 +324,13 @@ export default function ApplicationManagement() {
       const totalRounds = app.jobs?.total_rounds || 1;
       const currentRound = app.current_round || 1;
 
+      // Update any existing evaluation for this round to 'pass'
+      await supabase
+        .from('candidate_evaluations')
+        .update({ recommendation: 'pass' })
+        .eq('application_id', app.id)
+        .eq('round_number', currentRound);
+
       if (currentRound >= totalRounds) {
         await supabase.from('applications').update({ status: 'selected' }).eq('id', app.id);
         toast({ title: 'Success', description: 'Candidate selected!' });
