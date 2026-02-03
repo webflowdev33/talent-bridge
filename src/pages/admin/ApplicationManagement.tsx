@@ -867,16 +867,23 @@ export default function ApplicationManagement() {
                     {Array.from({ length: selectedApp.jobs?.total_rounds || 1 }).map((_, idx) => {
                       const roundNum = idx + 1;
                       const testAttempt = selectedApp.test_attempts?.find(t => t.round_number === roundNum);
-                      const isCurrent = selectedApp.current_round === roundNum;
+                      const isSelected = selectedApp.status === 'selected';
+                      const isRejected = selectedApp.status === 'rejected';
+                      const isCurrent = !isSelected && !isRejected && selectedApp.current_round === roundNum;
                       const isPast = (selectedApp.current_round || 1) > roundNum;
-                      const isPassed = testAttempt?.is_passed === true || (isPast && selectedApp.status !== 'rejected');
-                      const isFailed = testAttempt?.is_passed === false;
+                      
+                      // All rounds are passed if candidate is selected
+                      // Otherwise, check test attempt or if they've moved past this round
+                      const isPassed = isSelected || testAttempt?.is_passed === true || (isPast && !isRejected);
+                      const isFailed = !isSelected && (testAttempt?.is_passed === false || (isRejected && selectedApp.current_round === roundNum));
 
                       return (
                         <div 
                           key={roundNum}
                           className={`flex items-center justify-between p-2.5 rounded-lg border ${
-                            isCurrent ? 'border-primary bg-primary/5' : 'border-border'
+                            isCurrent ? 'border-primary bg-primary/5' : 
+                            isPassed ? 'border-success/30 bg-success/5' :
+                            isFailed ? 'border-destructive/30 bg-destructive/5' : 'border-border'
                           }`}
                         >
                           <div className="flex items-center gap-2">
@@ -895,6 +902,12 @@ export default function ApplicationManagement() {
                               <span className="text-xs text-muted-foreground">
                                 {testAttempt.obtained_marks}/{testAttempt.total_marks}
                               </span>
+                            )}
+                            {isPassed && !testAttempt?.is_submitted && (
+                              <Badge className="text-xs bg-success/10 text-success border-success/30">Passed</Badge>
+                            )}
+                            {isFailed && (
+                              <Badge className="text-xs bg-destructive/10 text-destructive border-destructive/30">Failed</Badge>
                             )}
                             {isCurrent && !testAttempt?.is_submitted && (
                               <Badge variant="outline" className="text-xs">Current</Badge>
