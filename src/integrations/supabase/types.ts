@@ -264,6 +264,50 @@ export type Database = {
           },
         ]
       }
+      job_tasks: {
+        Row: {
+          created_at: string
+          description: string
+          estimated_hours: number | null
+          id: string
+          instructions: string | null
+          is_active: boolean | null
+          job_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          estimated_hours?: number | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          job_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          estimated_hours?: number | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          job_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_tasks_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           created_at: string | null
@@ -480,6 +524,66 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_assignments: {
+        Row: {
+          application_id: string
+          assigned_at: string
+          due_date: string | null
+          id: string
+          reviewed_at: string | null
+          reviewer_notes: string | null
+          score: number | null
+          status: string | null
+          submission_notes: string | null
+          submission_url: string | null
+          submitted_at: string | null
+          task_id: string
+        }
+        Insert: {
+          application_id: string
+          assigned_at?: string
+          due_date?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewer_notes?: string | null
+          score?: number | null
+          status?: string | null
+          submission_notes?: string | null
+          submission_url?: string | null
+          submitted_at?: string | null
+          task_id: string
+        }
+        Update: {
+          application_id?: string
+          assigned_at?: string
+          due_date?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewer_notes?: string | null
+          score?: number | null
+          status?: string | null
+          submission_notes?: string | null
+          submission_url?: string | null
+          submitted_at?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_assignments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "job_tasks"
             referencedColumns: ["id"]
           },
         ]

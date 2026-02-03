@@ -30,7 +30,8 @@ import {
   UserX,
   AlertCircle,
   FileText,
-  Target
+  Target,
+  ClipboardList
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -437,7 +438,7 @@ export default function AdminDashboard() {
                 <CardTitle className="text-base">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-3 grid-cols-2 md:grid-cols-5">
+                <div className="grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
                   <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
                     <Link to="/admin/jobs">
                       <Briefcase className="h-4 w-4" />
@@ -457,6 +458,12 @@ export default function AdminDashboard() {
                     </Link>
                   </Button>
                   <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
+                    <Link to="/admin/tasks">
+                      <ClipboardList className="h-4 w-4" />
+                      <span className="text-xs">Tasks</span>
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
                     <Link to="/admin/questions">
                       <ClipboardCheck className="h-4 w-4" />
                       <span className="text-xs">Questions</span>
@@ -471,7 +478,7 @@ export default function AdminDashboard() {
                   <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
                     <Link to="/admin/evaluations">
                       <Target className="h-4 w-4" />
-                      <span className="text-xs">Eval Parameters</span>
+                      <span className="text-xs">Eval Params</span>
                     </Link>
                   </Button>
                 </div>
