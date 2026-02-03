@@ -444,7 +444,7 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-3 grid-cols-2 md:grid-cols-5">
-                  <Button asChild className="h-auto py-3 flex-col gap-1.5">
+                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
                     <Link to="/admin/jobs">
                       <Briefcase className="h-4 w-4" />
                       <span className="text-xs">Jobs</span>
