@@ -21,7 +21,8 @@ import {
   Loader2,
   Trophy,
   Target,
-  BookOpen
+  BookOpen,
+  ClipboardList
 } from 'lucide-react';
 
 interface Application {
@@ -317,9 +318,19 @@ export default function Dashboard() {
                 variant="outline"
                 className="border border-border text-sm sm:text-base w-full sm:w-auto"
               >
+                <Link to="/my-tasks">
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  My Tasks
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="border border-border text-sm sm:text-base w-full sm:w-auto"
+              >
                 <Link to="/guide?view=true">
                   <BookOpen className="mr-2 h-4 w-4" />
-                  View Guidelines
+                  Guidelines
                 </Link>
               </Button>
               <Button
