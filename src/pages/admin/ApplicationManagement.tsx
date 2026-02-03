@@ -433,134 +433,138 @@ export default function ApplicationManagement() {
   };
 
   const CandidateRow = ({ app, showRoundActions = true }: { app: Application; showRoundActions?: boolean }) => (
-    <div 
-      className="flex items-center gap-4 p-3 bg-card border-b last:border-b-0 hover:bg-muted/50 transition-colors cursor-pointer"
+    <tr 
+      className="border-b last:border-b-0 hover:bg-muted/50 transition-colors cursor-pointer"
       onClick={() => { setSelectedApp(app); setDetailsOpen(true); }}
     >
-      {/* Avatar & Name */}
-      <div className="flex items-center gap-3 min-w-[200px] flex-1">
-        <Avatar className="h-9 w-9 shrink-0">
-          <AvatarImage src={avatarUrls.get(app.user_id)} />
-          <AvatarFallback className="text-xs font-medium">
-            {app.profiles?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0">
-          <p className="font-medium text-sm truncate">{app.profiles?.full_name || 'Unknown'}</p>
-          <p className="text-xs text-muted-foreground truncate">{app.profiles?.email}</p>
+      {/* Candidate */}
+      <td className="p-3">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-9 w-9 shrink-0">
+            <AvatarImage src={avatarUrls.get(app.user_id)} />
+            <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
+              {app.profiles?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="font-medium text-sm">{app.profiles?.full_name || 'Unknown'}</p>
+            <p className="text-xs text-muted-foreground truncate">{app.profiles?.email}</p>
+          </div>
         </div>
-      </div>
+      </td>
 
       {/* Job */}
-      <div className="hidden md:block w-[140px]">
-        <Badge variant="secondary" className="text-xs truncate max-w-full">
+      <td className="p-3 hidden md:table-cell">
+        <Badge variant="outline" className="text-xs font-normal">
           {app.jobs?.title || 'Job'}
         </Badge>
-      </div>
+      </td>
 
       {/* Round */}
-      <div className="hidden lg:flex items-center gap-1.5 w-[80px]">
-        <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">
-          {app.current_round || 1}
-        </span>
-        <span className="text-xs text-muted-foreground">/ {app.jobs?.total_rounds || 1}</span>
-      </div>
+      <td className="p-3 hidden lg:table-cell">
+        <div className="flex items-center gap-1">
+          <span className="text-sm font-medium text-primary">{app.current_round || 1}</span>
+          <span className="text-xs text-muted-foreground">/ {app.jobs?.total_rounds || 1}</span>
+        </div>
+      </td>
 
       {/* Status */}
-      <div className="w-[90px]">
+      <td className="p-3">
         {getStatusBadge(app)}
-      </div>
+      </td>
 
-      {/* Date */}
-      <div className="hidden sm:block w-[80px] text-xs text-muted-foreground">
+      {/* Applied Date */}
+      <td className="p-3 hidden sm:table-cell text-sm text-muted-foreground">
         {app.created_at ? format(new Date(app.created_at), 'MMM d') : '-'}
-      </div>
+      </td>
 
       {/* Actions */}
-      <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-        {!app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && (
-          <>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              className="h-8 w-8 p-0 text-success hover:text-success hover:bg-success/10"
-              onClick={() => handleApprove(app)}
-              disabled={actionLoading === app.id}
-              title="Approve"
-            >
-              {actionLoading === app.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-            </Button>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={() => handleReject(app)}
-              disabled={actionLoading === app.id}
-              title="Reject"
-            >
-              <XCircle className="h-4 w-4" />
-            </Button>
-          </>
-        )}
-        
-        {showRoundActions && app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && (
-          <>
-            <Button 
-              size="sm" 
-              variant={app.test_enabled ? "default" : "ghost"}
-              className={`h-8 px-2 text-xs ${app.test_enabled ? 'bg-primary' : ''}`}
-              onClick={() => handleEnableTest(app)}
-              disabled={actionLoading === app.id}
-              title={app.test_enabled ? 'Disable Test' : 'Enable Test'}
-            >
-              {app.test_enabled ? 'Testing' : 'Test'}
-            </Button>
+      <td className="p-3 text-right" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-end gap-1">
+          {!app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && (
+            <>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="h-8 w-8 p-0 text-success hover:text-success hover:bg-success/10"
+                onClick={() => handleApprove(app)}
+                disabled={actionLoading === app.id}
+                title="Approve"
+              >
+                {actionLoading === app.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => handleReject(app)}
+                disabled={actionLoading === app.id}
+                title="Reject"
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+          
+          {showRoundActions && app.admin_approved && app.status !== 'rejected' && app.status !== 'selected' && (
+            <>
+              <Button 
+                size="sm" 
+                variant={app.test_enabled ? "default" : "ghost"}
+                className={`h-8 px-2 text-xs ${app.test_enabled ? 'bg-primary' : ''}`}
+                onClick={() => handleEnableTest(app)}
+                disabled={actionLoading === app.id}
+                title={app.test_enabled ? 'Disable Test' : 'Enable Test'}
+              >
+                {app.test_enabled ? 'Testing' : 'Test'}
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="h-8 w-8 p-0"
+                onClick={() => { setSelectedApp(app); setEvaluateOpen(true); }}
+                title="Evaluate"
+              >
+                <Star className="h-4 w-4" />
+              </Button>
+              {app.status === 'passed' && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="h-8 px-2 text-xs text-primary border-primary"
+                  onClick={() => handleMoveToNextRound(app)}
+                  disabled={actionLoading === app.id}
+                >
+                  <ArrowUpRight className="h-3.5 w-3.5 mr-1" />
+                  {(app.current_round || 1) >= (app.jobs?.total_rounds || 1) ? 'Select' : 'Next'}
+                </Button>
+              )}
+            </>
+          )}
+
+          {app.profiles?.resume_url && (
             <Button 
               size="sm" 
               variant="ghost" 
               className="h-8 w-8 p-0"
-              onClick={() => { setSelectedApp(app); setEvaluateOpen(true); }}
-              title="Evaluate"
+              onClick={() => handleViewResume(app.profiles!.resume_url!)}
+              title="View Resume"
             >
-              <Star className="h-4 w-4" />
+              <FileText className="h-4 w-4" />
             </Button>
-            {app.status === 'passed' && (
-              <Button 
-                size="sm" 
-                variant="outline"
-                className="h-8 px-2 text-xs text-primary border-primary"
-                onClick={() => handleMoveToNextRound(app)}
-                disabled={actionLoading === app.id}
-              >
-                <ArrowUpRight className="h-3.5 w-3.5 mr-1" />
-                {(app.current_round || 1) >= (app.jobs?.total_rounds || 1) ? 'Select' : 'Next'}
-              </Button>
-            )}
-          </>
-        )}
-
-        {app.profiles?.resume_url && (
+          )}
           <Button 
             size="sm" 
             variant="ghost" 
-            className="h-8 w-8 p-0"
-            onClick={() => handleViewResume(app.profiles!.resume_url!)}
-            title="View Resume"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+            onClick={() => { setAppToDelete(app); setDeleteOpen(true); }}
+            title="Delete"
           >
-            <FileText className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" />
           </Button>
-        )}
-        <Button 
-          size="sm" 
-          variant="ghost" 
-          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-          onClick={() => { setAppToDelete(app); setDeleteOpen(true); }}
-          title="Delete"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
+        </div>
+      </td>
+    </tr>
   );
 
   const CandidateList = ({ apps, showRoundActions = true, emptyMessage = "No candidates" }: { 
@@ -574,17 +578,22 @@ export default function ApplicationManagement() {
           {emptyMessage}
         </div>
       ) : (
-        <div className="divide-y">
-          {/* Header */}
-          <div className="flex items-center gap-4 px-3 py-2 bg-muted/50 text-xs font-medium text-muted-foreground">
-            <div className="min-w-[200px] flex-1">Candidate</div>
-            <div className="hidden md:block w-[140px]">Job</div>
-            <div className="hidden lg:block w-[80px]">Round</div>
-            <div className="w-[90px]">Status</div>
-            <div className="hidden sm:block w-[80px]">Applied</div>
-            <div className="w-[180px] text-right">Actions</div>
-          </div>
-          {apps.map(app => <CandidateRow key={app.id} app={app} showRoundActions={showRoundActions} />)}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-muted/50 text-xs font-medium text-muted-foreground">
+                <th className="p-3 text-left">Candidate</th>
+                <th className="p-3 text-left hidden md:table-cell">Job</th>
+                <th className="p-3 text-left hidden lg:table-cell">Round</th>
+                <th className="p-3 text-left">Status</th>
+                <th className="p-3 text-left hidden sm:table-cell">Applied</th>
+                <th className="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {apps.map(app => <CandidateRow key={app.id} app={app} showRoundActions={showRoundActions} />)}
+            </tbody>
+          </table>
         </div>
       )}
     </Card>
