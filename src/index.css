@@ -141,6 +141,34 @@
   }
 }
 
+/* Rich Text Editor Styles */
+.prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1rem 0;
+  border-radius: 0.5rem;
+}
+
+.prose a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose a:hover {
+  color: hsl(var(--primary) / 0.8);
+}
+
+/* TipTap Editor placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+  color: hsl(var(--muted-foreground));
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
 @layer utilities {
   .text-gradient {
     @apply bg-clip-text text-transparent;

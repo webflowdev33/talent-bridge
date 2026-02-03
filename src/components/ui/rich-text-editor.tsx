@@ -61,8 +61,10 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
         },
       }),
       Image.configure({
+        inline: false,
+        allowBase64: true,
         HTMLAttributes: {
-          class: 'rounded-md max-w-full my-4',
+          class: 'rounded-md max-w-full my-4 block',
         },
       }),
       Placeholder.configure({
