@@ -10,8 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { HiringPipeline } from '@/components/admin/HiringPipeline';
-import { CandidateFunnel } from '@/components/admin/CandidateFunnel';
 import { 
   Briefcase, 
   Users, 
@@ -32,7 +30,6 @@ import {
   UserX,
   AlertCircle,
   FileText,
-  BarChart3,
   Target
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -334,10 +331,6 @@ export default function AdminDashboard() {
         <Tabs defaultValue="dashboard" className="w-full">
           <TabsList className="sticky top-0 z-10 mb-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border shadow-sm">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="pipeline" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Pipeline
-            </TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
           </TabsList>
 
@@ -486,12 +479,6 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="pipeline" className="space-y-6">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <CandidateFunnel />
-            </div>
-            <HiringPipeline />
-          </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
             <Card>
