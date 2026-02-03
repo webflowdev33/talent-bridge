@@ -22,6 +22,7 @@ import ApplicationManagement from "./pages/admin/ApplicationManagement";
 import QuestionManagement from "./pages/admin/QuestionManagement";
 import TestResults from "./pages/admin/TestResults";
 import EvaluationParameters from "./pages/admin/EvaluationParameters";
+import TaskManagement from "./pages/admin/TaskManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -104,6 +105,11 @@ const App = () => (
             <Route path="/admin/evaluations" element={
               <ProtectedRoute requiredRole="admin">
                 <EvaluationParameters />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/tasks" element={
+              <ProtectedRoute requiredRole="admin">
+                <TaskManagement />
               </ProtectedRoute>
             } />
 
