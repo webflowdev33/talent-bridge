@@ -32,7 +32,8 @@ import {
   UserX,
   AlertCircle,
   FileText,
-  BarChart3
+  BarChart3,
+  Target
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -472,6 +473,12 @@ export default function AdminDashboard() {
                     <Link to="/admin/results">
                       <FileText className="h-4 w-4" />
                       <span className="text-xs">Results</span>
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
+                    <Link to="/admin/evaluations">
+                      <Target className="h-4 w-4" />
+                      <span className="text-xs">Eval Parameters</span>
                     </Link>
                   </Button>
                 </div>
