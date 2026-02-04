@@ -15,7 +15,10 @@ import {
   ArrowLeft,
   CheckCircle2,
   Loader2,
-  CalendarDays
+  CalendarDays,
+  MapPin,
+  Monitor,
+  Building
 } from 'lucide-react';
 import { format, parseISO, isAfter, startOfDay } from 'date-fns';
 
@@ -26,12 +29,16 @@ interface Slot {
   end_time: string;
   max_capacity: number | null;
   current_capacity: number | null;
+  round_number: number | null;
+  mode: string | null;
+  venue: string | null;
 }
 
 interface Application {
   id: string;
   status: string;
   slot_id: string | null;
+  current_round: number;
   jobs: {
     title: string;
   };
@@ -59,7 +66,7 @@ export default function SelectSlot() {
       // Fetch application details
       const { data: appData, error: appError } = await supabase
         .from('applications')
-        .select('id, status, slot_id, jobs (title)')
+        .select('id, status, slot_id, current_round, jobs (title)')
         .eq('id', applicationId)
         .eq('user_id', user!.id)
         .single();
@@ -68,7 +75,9 @@ export default function SelectSlot() {
       setApplication(appData as unknown as Application);
       setSelectedSlotId(appData.slot_id);
 
-      // Fetch available slots (universal, not job-specific)
+      const currentRound = appData.current_round || 1;
+
+      // Fetch available slots (filter by round_number if set, or show universal slots)
       const today = startOfDay(new Date()).toISOString().split('T')[0];
       const { data: slotsData, error: slotsError } = await supabase
         .from('slots')
@@ -80,10 +89,13 @@ export default function SelectSlot() {
 
       if (slotsError) throw slotsError;
 
-      const rawSlots = slotsData || [];
+      // Filter slots that match the current round or are universal (null round_number)
+      const roundFilteredSlots = (slotsData || []).filter(
+        (slot: any) => slot.round_number === null || slot.round_number === currentRound
+      );
 
       // Compute current bookings per slot based on applications, so counts are always accurate
-      const slotIds = rawSlots.map((s) => s.id);
+      const slotIds = roundFilteredSlots.map((s: any) => s.id);
       let bookedCounts: Record<string, number> = {};
 
       if (slotIds.length > 0) {
@@ -101,7 +113,7 @@ export default function SelectSlot() {
         }, {});
       }
 
-      const slotsWithCounts: Slot[] = rawSlots.map((slot: any) => ({
+      const slotsWithCounts: Slot[] = roundFilteredSlots.map((slot: any) => ({
         ...slot,
         current_capacity: bookedCounts[slot.id] ?? 0,
       }));
@@ -272,10 +284,24 @@ export default function SelectSlot() {
                                 <p className="font-medium">
                                   {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
                                 </p>
-                                {/* <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <Users className="h-4 w-4" />
-                                  <span>{remaining} spots remaining</span>
-                                </div> */}
+                                <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                                  {slot.mode && (
+                                    <span className="flex items-center gap-1">
+                                      {slot.mode === 'online' ? (
+                                        <Monitor className="h-3 w-3" />
+                                      ) : (
+                                        <Building className="h-3 w-3" />
+                                      )}
+                                      {slot.mode === 'online' ? 'Online' : 'In-Person'}
+                                    </span>
+                                  )}
+                                  {slot.venue && slot.mode === 'in_person' && (
+                                    <span className="flex items-center gap-1">
+                                      <MapPin className="h-3 w-3" />
+                                      {slot.venue}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             

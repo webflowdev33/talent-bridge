@@ -62,6 +62,21 @@ interface JobRound {
   description: string | null;
 }
 
+interface CandidateEvaluation {
+  id: string;
+  application_id: string;
+  round_number: number;
+  recommendation: string;
+  overall_remarks: string | null;
+  is_visible_to_candidate: boolean;
+  scores: Array<{
+    parameter_name: string;
+    score: number;
+    max_score: number;
+    remarks: string | null;
+  }>;
+}
+
 interface Profile {
   full_name: string | null;
   email: string | null;
@@ -88,6 +103,7 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [testAttempts, setTestAttempts] = useState<TestAttempt[]>([]);
   const [jobRoundsMap, setJobRoundsMap] = useState<Record<string, JobRound[]>>({});
+  const [evaluationsMap, setEvaluationsMap] = useState<Record<string, CandidateEvaluation[]>>({});
   const [loading, setLoading] = useState(true);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -144,6 +160,60 @@ export default function Dashboard() {
           .order('round_number', { ascending: true });
 
         setTestAttempts(attemptsData as TestAttempt[] || []);
+
+        // Fetch visible evaluations for the user's applications
+        const { data: evaluationsData } = await supabase
+          .from('candidate_evaluations')
+          .select('id, application_id, round_number, recommendation, overall_remarks, is_visible_to_candidate')
+          .in('application_id', applicationIds)
+          .eq('is_visible_to_candidate', true)
+          .order('round_number', { ascending: true });
+
+        if (evaluationsData && evaluationsData.length > 0) {
+          // Fetch evaluation scores for visible evaluations
+          const evaluationIds = evaluationsData.map(e => e.id);
+          const { data: scoresData } = await supabase
+            .from('evaluation_scores')
+            .select('evaluation_id, parameter_id, score, remarks')
+            .in('evaluation_id', evaluationIds);
+
+          // Fetch evaluation parameters for names
+          const { data: parametersData } = await supabase
+            .from('evaluation_parameters')
+            .select('id, name, max_score');
+
+          // Map scores to evaluations
+          const paramsMap = new Map((parametersData || []).map(p => [p.id, p]));
+          const scoresMap = new Map<string, Array<{ parameter_name: string; score: number; max_score: number; remarks: string | null }>>();
+          
+          (scoresData || []).forEach(score => {
+            const param = paramsMap.get(score.parameter_id);
+            if (param) {
+              if (!scoresMap.has(score.evaluation_id)) {
+                scoresMap.set(score.evaluation_id, []);
+              }
+              scoresMap.get(score.evaluation_id)!.push({
+                parameter_name: param.name,
+                score: score.score,
+                max_score: param.max_score,
+                remarks: score.remarks,
+              });
+            }
+          });
+
+          // Group by application_id
+          const evalsMap: Record<string, CandidateEvaluation[]> = {};
+          evaluationsData.forEach((evaluation) => {
+            if (!evalsMap[evaluation.application_id]) {
+              evalsMap[evaluation.application_id] = [];
+            }
+            evalsMap[evaluation.application_id].push({
+              ...evaluation,
+              scores: scoresMap.get(evaluation.id) || [],
+            });
+          });
+          setEvaluationsMap(evalsMap);
+        }
       }
 
       // Fetch job rounds for all jobs
@@ -180,6 +250,7 @@ export default function Dashboard() {
   const getRoundBreakdown = (app: Application) => {
     const attempts = testAttempts.filter(ta => ta.application_id === app.id);
     const jobRounds = jobRoundsMap[app.jobs.id] || [];
+    const appEvaluations = evaluationsMap[app.id] || [];
     const rounds = [];
     const total = app.jobs.total_rounds || 1;
     const currentRound = app.current_round;
@@ -187,6 +258,7 @@ export default function Dashboard() {
     for (let i = 1; i <= total; i++) {
       const attempt = attempts.find(ta => ta.round_number === i);
       const roundInfo = jobRounds.find(r => r.round_number === i);
+      const evaluation = appEvaluations.find(e => e.round_number === i);
       const roundName = roundInfo?.name || `Round ${i}`;
       const roundDescription = roundInfo?.description || null;
 
@@ -226,10 +298,15 @@ export default function Dashboard() {
         score,
         total: maxScore,
         date,
+        evaluation: evaluation || null,
       });
     }
 
     return rounds;
+  };
+
+  const getEvaluationsForApplication = (appId: string) => {
+    return evaluationsMap[appId] || [];
   };
 
   const getCurrentRoundName = (jobId: string, currentRound: number) => {
@@ -646,6 +723,32 @@ export default function Dashboard() {
                                     {round.status === 'pending' && (
                                       <div className="text-xs text-muted-foreground">
                                         Pending
+                                      </div>
+                                    )}
+                                    {/* Show visible evaluation feedback */}
+                                    {round.evaluation && (
+                                      <div className="mt-2 pt-2 border-t border-border/50">
+                                        <div className="text-xs font-medium text-primary mb-1">Feedback</div>
+                                        {round.evaluation.scores.length > 0 && (
+                                          <div className="space-y-0.5">
+                                            {round.evaluation.scores.slice(0, 2).map((score, idx) => (
+                                              <div key={idx} className="text-xs text-muted-foreground flex justify-between">
+                                                <span className="truncate">{score.parameter_name}</span>
+                                                <span className="font-medium ml-1">{score.score}/{score.max_score}</span>
+                                              </div>
+                                            ))}
+                                            {round.evaluation.scores.length > 2 && (
+                                              <div className="text-xs text-muted-foreground">
+                                                +{round.evaluation.scores.length - 2} more
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                        {round.evaluation.overall_remarks && (
+                                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2 italic">
+                                            "{round.evaluation.overall_remarks}"
+                                          </p>
+                                        )}
                                       </div>
                                     )}
                                   </div>
