@@ -63,6 +63,7 @@ interface JobTemplate {
   description: string | null;
   location: string | null;
   question_count: number | null;
+  test_time_minutes: number | null;
   is_active: boolean | null;
   created_at: string | null;
 }
@@ -79,6 +80,7 @@ interface TemplateFormData {
   description: string;
   location: string;
   question_count: number;
+  test_time_minutes: number;
   is_active: boolean;
 }
 
@@ -96,6 +98,7 @@ const defaultFormData: TemplateFormData = {
   description: '',
   location: '',
   question_count: 10,
+  test_time_minutes: 15,
   is_active: true,
 };
 
@@ -190,6 +193,7 @@ export default function JobTemplates() {
         description: template.description || '',
         location: template.location || '',
         question_count: template.question_count ?? 10,
+        test_time_minutes: template.test_time_minutes ?? 15,
         is_active: template.is_active ?? true,
       });
       const rounds = await fetchTemplateRounds(template.id);
@@ -240,6 +244,7 @@ export default function JobTemplates() {
             description: formData.description || null,
             location: formData.location || null,
             question_count: formData.question_count,
+            test_time_minutes: formData.test_time_minutes,
             is_active: formData.is_active,
           })
           .eq('id', selectedTemplate.id);
@@ -258,6 +263,7 @@ export default function JobTemplates() {
             description: formData.description || null,
             location: formData.location || null,
             question_count: formData.question_count,
+            test_time_minutes: formData.test_time_minutes,
             is_active: formData.is_active,
           })
           .select('id')
@@ -338,6 +344,7 @@ export default function JobTemplates() {
           description: selectedTemplate.description,
           location: selectedTemplate.location,
           question_count: selectedTemplate.question_count ?? 10,
+          test_time_minutes: selectedTemplate.test_time_minutes ?? 15,
           is_active: false,
           template_id: selectedTemplate.id,
           campaign_id: selectedCampaignId,
@@ -452,20 +459,37 @@ export default function JobTemplates() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="question_count">Questions per Test</Label>
-                    <Input
-                      id="question_count"
-                      type="number"
-                      min={1}
-                      max={100}
-                      value={formData.question_count}
-                      onChange={(e) => setFormData({ ...formData, question_count: parseInt(e.target.value) || 10 })}
-                      placeholder="Number of questions"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Number of questions to display during aptitude/technical tests
-                    </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="question_count">Questions per Test</Label>
+                      <Input
+                        id="question_count"
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={formData.question_count}
+                        onChange={(e) => setFormData({ ...formData, question_count: parseInt(e.target.value) || 10 })}
+                        placeholder="Number of questions"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Questions to display in tests
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="test_time_minutes">Test Duration (minutes)</Label>
+                      <Input
+                        id="test_time_minutes"
+                        type="number"
+                        min={5}
+                        max={180}
+                        value={formData.test_time_minutes}
+                        onChange={(e) => setFormData({ ...formData, test_time_minutes: parseInt(e.target.value) || 15 })}
+                        placeholder="Duration in minutes"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Time limit for aptitude tests
+                      </p>
+                    </div>
                   </div>
 
                   <div className="space-y-2">

@@ -46,6 +46,7 @@ interface Job {
   requirements: string | null;
   total_rounds: number | null;
   question_count: number | null;
+  test_time_minutes: number | null;
   is_active: boolean | null;
   created_at: string | null;
 }
@@ -66,6 +67,7 @@ interface JobFormData {
   department: string;
   location: string;
   question_count: number;
+  test_time_minutes: number;
   is_active: boolean;
 }
 
@@ -75,6 +77,7 @@ const defaultFormData: JobFormData = {
   department: '',
   location: '',
   question_count: 10,
+  test_time_minutes: 15,
   is_active: false,
 };
 
@@ -130,6 +133,7 @@ export default function JobManagement() {
         department: job.department || '',
         location: job.location || '',
         question_count: job.question_count ?? 10,
+        test_time_minutes: job.test_time_minutes ?? 15,
         is_active: job.is_active ?? true,
       });
 
@@ -177,6 +181,7 @@ export default function JobManagement() {
             department: formData.department,
             location: formData.location,
             question_count: formData.question_count,
+            test_time_minutes: formData.test_time_minutes,
             total_rounds: jobRounds.length || 1,
             is_active: formData.is_active,
           })
@@ -209,6 +214,7 @@ export default function JobManagement() {
             department: formData.department,
             location: formData.location,
             question_count: formData.question_count,
+            test_time_minutes: formData.test_time_minutes,
             total_rounds: jobRounds.length || 1,
             is_active: formData.is_active,
           })
@@ -363,20 +369,37 @@ export default function JobManagement() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="question_count">Questions per Test</Label>
-                    <Input
-                      id="question_count"
-                      type="number"
-                      min={1}
-                      max={100}
-                      value={formData.question_count}
-                      onChange={(e) => setFormData({ ...formData, question_count: parseInt(e.target.value) || 10 })}
-                      placeholder="Number of questions"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Number of questions to display during aptitude/technical tests
-                    </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="question_count">Questions per Test</Label>
+                      <Input
+                        id="question_count"
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={formData.question_count}
+                        onChange={(e) => setFormData({ ...formData, question_count: parseInt(e.target.value) || 10 })}
+                        placeholder="Number of questions"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Questions to display in tests
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="test_time_minutes">Test Duration (minutes)</Label>
+                      <Input
+                        id="test_time_minutes"
+                        type="number"
+                        min={5}
+                        max={180}
+                        value={formData.test_time_minutes}
+                        onChange={(e) => setFormData({ ...formData, test_time_minutes: parseInt(e.target.value) || 15 })}
+                        placeholder="Duration in minutes"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Time limit for aptitude tests
+                      </p>
+                    </div>
                   </div>
 
                   {/* Interview Rounds Definition */}
