@@ -765,23 +765,71 @@ export default function ApplicationManagement() {
                         <span>{selectedApp.profiles.phone}</span>
                       </div>
                     )}
-                  </div>
                 </div>
+              </div>
 
-                <Separator />
+              <Separator />
 
-                {/* Status & Actions */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Status</h4>
-                  <div className="flex items-center gap-2">
-                    {getStatusBadge(selectedApp)}
-                    {selectedApp.slots && (
-                      <Badge variant="outline" className="text-xs">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {format(new Date(selectedApp.slots.slot_date), 'MMM d')} at {selectedApp.slots.start_time}
-                      </Badge>
-                    )}
-                  </div>
+              {/* Job Assignment */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Job Assignment</h4>
+                <Select 
+                  value={selectedApp.job_id} 
+                  onValueChange={async (newJobId) => {
+                    if (newJobId === selectedApp.job_id) return;
+                    setActionLoading(selectedApp.id);
+                    try {
+                      const newJob = jobs.find(j => j.id === newJobId);
+                      await supabase.from('applications').update({ 
+                        job_id: newJobId,
+                        current_round: 1,
+                        status: 'applied',
+                        admin_approved: false,
+                        test_enabled: false
+                      }).eq('id', selectedApp.id);
+                      toast({ 
+                        title: 'Job Updated', 
+                        description: `Moved to ${newJob?.title}. Application reset to pending.` 
+                      });
+                      fetchApplications();
+                      setDetailsOpen(false);
+                    } catch (error: any) {
+                      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+                    } finally {
+                      setActionLoading(null);
+                    }
+                  }}
+                  disabled={actionLoading === selectedApp.id}
+                >
+                  <SelectTrigger className="w-full">
+                    <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jobs.map(job => (
+                      <SelectItem key={job.id} value={job.id}>{job.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Changing the job will reset the application to pending status
+                </p>
+              </div>
+
+              <Separator />
+
+              {/* Status & Actions */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Status</h4>
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(selectedApp)}
+                  {selectedApp.slots && (
+                    <Badge variant="outline" className="text-xs">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      {format(new Date(selectedApp.slots.slot_date), 'MMM d')} at {selectedApp.slots.start_time}
+                    </Badge>
+                  )}
+                </div>
                   
                   {/* Quick Actions */}
                   <div className="flex flex-wrap gap-2 pt-2">
