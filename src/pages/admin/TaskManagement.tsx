@@ -139,12 +139,12 @@ export default function TaskManagement() {
   };
 
   const fetchCandidatesForJob = async (jobId: string) => {
-    // First fetch applications
+    // First fetch applications - include all active candidate statuses
     const { data: appsData, error: appsError } = await supabase
       .from('applications')
       .select('id, user_id, job_id, status')
       .eq('job_id', jobId)
-      .in('status', ['applied', 'shortlisted', 'round_1', 'round_2', 'round_3']);
+      .not('status', 'in', '("rejected","failed","selected")');
 
     if (appsError) {
       toast({ title: 'Error', description: appsError.message, variant: 'destructive' });
