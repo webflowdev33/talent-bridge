@@ -694,6 +694,47 @@ export type Database = {
           },
         ]
       }
+      template_rounds: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          instructions: string | null
+          mode: string | null
+          name: string
+          round_number: number
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          instructions?: string | null
+          mode?: string | null
+          name: string
+          round_number?: number
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          instructions?: string | null
+          mode?: string | null
+          name?: string
+          round_number?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_rounds_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "job_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       test_attempts: {
         Row: {
           application_id: string
