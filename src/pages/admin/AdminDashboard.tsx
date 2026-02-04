@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,12 +35,7 @@ import {
   UserCheck,
   UserX,
   AlertCircle,
-  FileText,
-  Target,
-  ClipboardList,
   Megaphone,
-  LayoutTemplate,
-  FileCheck
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -385,21 +379,17 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
+      <AdminLayout>
+        <div className="flex-1 flex items-center justify-center">
           <div className="animate-pulse text-muted-foreground">Loading dashboard...</div>
-        </main>
-        <Footer />
-      </div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/30">
-      <Header />
-      
-      <main className="flex-1 container py-8">
+    <AdminLayout>
+      <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
@@ -527,76 +517,6 @@ export default function AdminDashboard() {
               </Card>
             </div>
 
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-9">
-                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
-                    <Link to="/admin/campaigns">
-                      <Megaphone className="h-4 w-4" />
-                      <span className="text-xs">Campaigns</span>
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
-                    <Link to="/admin/templates">
-                      <LayoutTemplate className="h-4 w-4" />
-                      <span className="text-xs">Templates</span>
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
-                    <Link to="/admin/jobs">
-                      <Briefcase className="h-4 w-4" />
-                      <span className="text-xs">Jobs</span>
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
-                    <Link to="/admin/slots">
-                      <Calendar className="h-4 w-4" />
-                      <span className="text-xs">Slots</span>
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
-                    <Link to="/admin/applications">
-                      <Users className="h-4 w-4" />
-                      <span className="text-xs">Applications</span>
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
-                    <Link to="/admin/tasks">
-                      <ClipboardList className="h-4 w-4" />
-                      <span className="text-xs">Tasks</span>
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
-                    <Link to="/admin/submissions">
-                      <FileCheck className="h-4 w-4" />
-                      <span className="text-xs">Submissions</span>
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
-                    <Link to="/admin/questions">
-                      <ClipboardCheck className="h-4 w-4" />
-                      <span className="text-xs">Questions</span>
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
-                    <Link to="/admin/results">
-                      <FileText className="h-4 w-4" />
-                      <span className="text-xs">Results</span>
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
-                    <Link to="/admin/evaluations">
-                      <Target className="h-4 w-4" />
-                      <span className="text-xs">Eval Params</span>
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Campaigns Tab - Cross Campaign Comparison */}
@@ -790,9 +710,7 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
         </Tabs>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
