@@ -18,7 +18,8 @@ import {
   CheckCircle2,
   Loader2,
   FileText,
-  AlertCircle
+  AlertCircle,
+  FolderOpen
 } from 'lucide-react';
 
 interface Job {
@@ -30,7 +31,13 @@ interface Job {
   location: string | null;
   salary_range: string | null;
   total_rounds: number | null;
+  campaign_id: string | null;
   created_at: string;
+}
+
+interface Campaign {
+  id: string;
+  name: string;
 }
 
 interface JobRound {
@@ -42,6 +49,7 @@ interface JobRound {
 export default function JobDetails() {
   const { jobId } = useParams<{ jobId: string }>();
   const [job, setJob] = useState<Job | null>(null);
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [jobRounds, setJobRounds] = useState<JobRound[]>([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
@@ -70,6 +78,19 @@ export default function JobDetails() {
 
       if (error) throw error;
       setJob(data);
+
+      // Fetch campaign details if job has a campaign
+      if (data.campaign_id) {
+        const { data: campaignData } = await supabase
+          .from('campaigns')
+          .select('id, name')
+          .eq('id', data.campaign_id)
+          .single();
+        
+        if (campaignData) {
+          setCampaign(campaignData);
+        }
+      }
 
       // Fetch job rounds
       const { data: roundsData } = await supabase
@@ -208,6 +229,12 @@ export default function JobDetails() {
                     {job.title}
                   </CardTitle>
                   <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                    {campaign && (
+                      <div className="flex items-center gap-1 text-primary">
+                        <FolderOpen className="h-4 w-4" />
+                        {campaign.name}
+                      </div>
+                    )}
                     {job.department && (
                       <div className="flex items-center gap-1">
                         <Building2 className="h-4 w-4" />
