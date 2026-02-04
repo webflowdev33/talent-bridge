@@ -52,11 +52,7 @@ interface JobTemplate {
   title: string;
   department: string | null;
   description: string | null;
-  requirements: string | null;
-  salary_range: string | null;
   location: string | null;
-  total_rounds: number | null;
-  question_count: number | null;
   is_active: boolean | null;
   created_at: string | null;
 }
@@ -71,11 +67,7 @@ interface TemplateFormData {
   title: string;
   department: string;
   description: string;
-  requirements: string;
-  salary_range: string;
   location: string;
-  total_rounds: number;
-  question_count: number;
   is_active: boolean;
 }
 
@@ -83,11 +75,7 @@ const defaultFormData: TemplateFormData = {
   title: '',
   department: '',
   description: '',
-  requirements: '',
-  salary_range: '',
   location: '',
-  total_rounds: 1,
-  question_count: 10,
   is_active: true,
 };
 
@@ -145,11 +133,7 @@ export default function JobTemplates() {
         title: template.title,
         department: template.department || '',
         description: template.description || '',
-        requirements: template.requirements || '',
-        salary_range: template.salary_range || '',
         location: template.location || '',
-        total_rounds: template.total_rounds || 1,
-        question_count: template.question_count || 10,
         is_active: template.is_active ?? true,
       });
     } else {
@@ -171,11 +155,7 @@ export default function JobTemplates() {
             title: formData.title,
             department: formData.department || null,
             description: formData.description || null,
-            requirements: formData.requirements || null,
-            salary_range: formData.salary_range || null,
             location: formData.location || null,
-            total_rounds: formData.total_rounds,
-            question_count: formData.question_count,
             is_active: formData.is_active,
           })
           .eq('id', selectedTemplate.id);
@@ -189,11 +169,7 @@ export default function JobTemplates() {
             title: formData.title,
             department: formData.department || null,
             description: formData.description || null,
-            requirements: formData.requirements || null,
-            salary_range: formData.salary_range || null,
             location: formData.location || null,
-            total_rounds: formData.total_rounds,
-            question_count: formData.question_count,
             is_active: formData.is_active,
           });
 
@@ -251,11 +227,7 @@ export default function JobTemplates() {
           title: selectedTemplate.title,
           department: selectedTemplate.department,
           description: selectedTemplate.description,
-          requirements: selectedTemplate.requirements,
-          salary_range: selectedTemplate.salary_range,
           location: selectedTemplate.location,
-          total_rounds: selectedTemplate.total_rounds,
-          question_count: selectedTemplate.question_count,
           is_active: false, // Start as inactive
           template_id: selectedTemplate.id,
           campaign_id: selectedCampaignId,
@@ -362,51 +334,6 @@ export default function JobTemplates() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="requirements">Requirements</Label>
-                    <Textarea
-                      id="requirements"
-                      value={formData.requirements}
-                      onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
-                      placeholder="Job requirements..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="salary_range">Salary Range</Label>
-                      <Input
-                        id="salary_range"
-                        value={formData.salary_range}
-                        onChange={(e) => setFormData({ ...formData, salary_range: e.target.value })}
-                        placeholder="e.g., $80k-$120k"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="total_rounds">Total Rounds</Label>
-                      <Input
-                        id="total_rounds"
-                        type="number"
-                        min="1"
-                        max="10"
-                        value={formData.total_rounds}
-                        onChange={(e) => setFormData({ ...formData, total_rounds: parseInt(e.target.value) || 1 })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="question_count">Questions</Label>
-                      <Input
-                        id="question_count"
-                        type="number"
-                        min="1"
-                        max="100"
-                        value={formData.question_count}
-                        onChange={(e) => setFormData({ ...formData, question_count: parseInt(e.target.value) || 10 })}
-                      />
-                    </div>
-                  </div>
-
                   <div className="flex items-center space-x-2">
                     <Switch
                       id="is_active"
@@ -454,7 +381,6 @@ export default function JobTemplates() {
                     <TableHead>Template</TableHead>
                     <TableHead>Department</TableHead>
                     <TableHead>Location</TableHead>
-                    <TableHead>Rounds</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -477,7 +403,6 @@ export default function JobTemplates() {
                           </div>
                         ) : '-'}
                       </TableCell>
-                      <TableCell>{template.total_rounds || 1}</TableCell>
                       <TableCell>
                         <Badge variant={template.is_active ? 'default' : 'secondary'}>
                           {template.is_active ? 'Active' : 'Inactive'}

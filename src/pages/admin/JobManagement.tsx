@@ -65,10 +65,6 @@ interface JobFormData {
   description: string;
   department: string;
   location: string;
-  salary_range: string;
-  requirements: string;
-  total_rounds: number;
-  question_count: number;
   is_active: boolean;
 }
 
@@ -77,10 +73,6 @@ const defaultFormData: JobFormData = {
   description: '',
   department: '',
   location: '',
-  salary_range: '',
-  requirements: '',
-  total_rounds: 1,
-  question_count: 10,
   is_active: false,
 };
 
@@ -135,10 +127,6 @@ export default function JobManagement() {
         description: job.description || '',
         department: job.department || '',
         location: job.location || '',
-        salary_range: job.salary_range || '',
-        requirements: job.requirements || '',
-        total_rounds: job.total_rounds || 1,
-        question_count: job.question_count || 10,
         is_active: job.is_active ?? true,
       });
 
@@ -185,10 +173,7 @@ export default function JobManagement() {
             description: formData.description,
             department: formData.department,
             location: formData.location,
-            salary_range: formData.salary_range,
-            requirements: formData.requirements,
-            total_rounds: formData.total_rounds,
-            question_count: formData.question_count,
+            total_rounds: jobRounds.length || 1,
             is_active: formData.is_active,
           })
           .eq('id', selectedJob.id);
@@ -219,10 +204,7 @@ export default function JobManagement() {
             description: formData.description,
             department: formData.department,
             location: formData.location,
-            salary_range: formData.salary_range,
-            requirements: formData.requirements,
-            total_rounds: formData.total_rounds,
-            question_count: formData.question_count,
+            total_rounds: jobRounds.length || 1,
             is_active: formData.is_active,
           })
           .select('id')
@@ -520,63 +502,14 @@ export default function JobManagement() {
                     ) : null}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="salary_range">Salary Range</Label>
-                      <Input
-                        id="salary_range"
-                        value={formData.salary_range}
-                        onChange={(e) => setFormData({ ...formData, salary_range: e.target.value })}
-                        placeholder="e.g., $80,000 - $120,000"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="total_rounds">Total Rounds</Label>
-                      <Input
-                        id="total_rounds"
-                        type="number"
-                        min="1"
-                        max="10"
-                        value={formData.total_rounds}
-                        onChange={(e) => setFormData({ ...formData, total_rounds: parseInt(e.target.value) || 1 })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="question_count">Number of Questions to Display</Label>
-                    <Input
-                      id="question_count"
-                      type="number"
-                      min="1"
-                      max="100"
-                      value={formData.question_count}
-                      onChange={(e) => setFormData({ ...formData, question_count: parseInt(e.target.value) || 10 })}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Questions will be randomly selected from the pool during the test.
-                    </p>
-                  </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="description">Description</Label>
                     <Textarea
                       id="description"
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="Job description..."
-                      rows={4}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="requirements">Requirements</Label>
-                    <Textarea
-                      id="requirements"
-                      value={formData.requirements}
-                      onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
-                      placeholder="Job requirements..."
-                      rows={4}
+                      placeholder="Brief job description and key responsibilities..."
+                      rows={3}
                     />
                   </div>
 
