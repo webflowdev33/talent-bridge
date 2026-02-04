@@ -87,12 +87,14 @@ export default function Test() {
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
   const [testStarted, setTestStarted] = useState(false);
   const [currentRoundInfo, setCurrentRoundInfo] = useState<JobRound | null>(null);
+  const [proctorReady, setProctorReady] = useState(false); // Delay proctoring until stable
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const submitTestRef = useRef<((autoSubmit: boolean) => Promise<void>) | null>(null);
   const violationProcessingRef = useRef<boolean>(false);
+  const lastBlurTimeRef = useRef<number>(0); // Track blur events to debounce
 
   // Initialize test
   useEffect(() => {
@@ -136,7 +138,8 @@ export default function Test() {
       
       // If user exits fullscreen during test, force back to fullscreen and count as violation
       // But allow exit if test is completed
-      if (!isNowFullscreen && testStarted && testAttemptId && !testCompleted) {
+      // Only count violation if proctoring is ready (prevents false positives during setup)
+      if (!isNowFullscreen && testStarted && testAttemptId && !testCompleted && proctorReady) {
         // Immediately try to re-enter fullscreen
         document.documentElement.requestFullscreen().catch(() => {
           // If request fails, still count violation
@@ -154,7 +157,7 @@ export default function Test() {
     
     // Also listen for fullscreen exit attempts and prevent them
     const handleFullscreenError = () => {
-      if (testStarted && testAttemptId && !testCompleted && !document.fullscreenElement) {
+      if (testStarted && testAttemptId && !testCompleted && proctorReady && !document.fullscreenElement) {
         // Try to re-enter fullscreen
         document.documentElement.requestFullscreen().catch(() => {});
       }
@@ -167,8 +170,8 @@ export default function Test() {
         if (document.fullscreenElement) {
           document.exitFullscreen().catch(() => {});
         }
-      } else if (testStarted && testAttemptId && !testCompleted && !document.fullscreenElement) {
-        // Test is active, force fullscreen
+      } else if (testStarted && testAttemptId && !testCompleted && proctorReady && !document.fullscreenElement) {
+        // Test is active and proctoring ready, force fullscreen
         document.documentElement.requestFullscreen().catch(() => {
           triggerViolation('fullscreen_exit', 'Fullscreen mode is required. Please stay in fullscreen during the test.');
         });
@@ -179,20 +182,30 @@ export default function Test() {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       clearInterval(fullscreenCheck);
     };
-  }, [testStarted, testAttemptId, testCompleted]);
+  }, [testStarted, testAttemptId, testCompleted, proctorReady]);
 
-  // Violation detection - only when test is started
+  // Violation detection - only when test is started AND proctoring is ready
   useEffect(() => {
-    if (!testStarted) return;
+    if (!testStarted || !proctorReady) return;
     
     const handleVisibilityChange = () => {
-      if (document.hidden && testAttemptId && !testCompleted && testStarted) {
+      // Only trigger if proctoring is ready and test conditions are met
+      if (document.hidden && testAttemptId && !testCompleted && testStarted && proctorReady) {
         triggerViolation('tab_switch', 'You switched to another tab. This is a violation.');
       }
     };
 
     const handleBlur = () => {
-      if (testAttemptId && !testCompleted && testStarted) {
+      // Debounce blur events - ignore if happened within 1 second of last blur
+      const now = Date.now();
+      if (now - lastBlurTimeRef.current < 1000) {
+        return; // Ignore rapid successive blur events
+      }
+      lastBlurTimeRef.current = now;
+      
+      // Only trigger if proctoring is ready and we're in fullscreen
+      // The blur event can fire during fullscreen transitions, so we check fullscreen state
+      if (testAttemptId && !testCompleted && testStarted && proctorReady && document.fullscreenElement) {
         triggerViolation('window_blur', 'You clicked outside the test window. Please stay focused on the test.');
       }
     };
@@ -376,7 +389,7 @@ export default function Test() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('keydown', handleKeyDownRefresh);
     };
-  }, [testStarted, testAttemptId, testCompleted, questions, currentIndex]);
+  }, [testStarted, testAttemptId, testCompleted, questions, currentIndex, proctorReady]);
 
   const enterFullscreen = async () => {
     try {
@@ -384,6 +397,12 @@ export default function Test() {
       setIsFullscreen(true);
       setShowFullscreenPrompt(false);
       setTestStarted(true);
+      
+      // Delay proctoring activation to allow UI to stabilize
+      // This prevents false positive violations during the initial fullscreen transition
+      setTimeout(() => {
+        setProctorReady(true);
+      }, 2000); // 2 second grace period after entering fullscreen
     } catch (err) {
       toast({
         title: 'Fullscreen Required',
