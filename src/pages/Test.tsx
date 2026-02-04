@@ -694,16 +694,44 @@ export default function Test() {
         })
         .eq('id', testAttemptId);
 
-      // Update application status
-      const newStatus = isPassed ? 'passed' : 'failed';
-      await supabase
-        .from('applications')
-        .update({
-          status: newStatus,
-          test_enabled: false,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', applicationId);
+      // Update application status and move to next round if passed
+      if (isPassed && application) {
+        const totalRounds = application.jobs?.total_rounds || 1;
+        const currentRound = application.current_round || 1;
+
+        if (currentRound >= totalRounds) {
+          // Final round - mark as selected
+          await supabase
+            .from('applications')
+            .update({ 
+              status: 'selected',
+              test_enabled: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', applicationId);
+        } else {
+          // Move to next round
+          await supabase
+            .from('applications')
+            .update({ 
+              current_round: currentRound + 1,
+              status: 'passed',
+              test_enabled: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', applicationId);
+        }
+      } else {
+        // Failed the test
+        await supabase
+          .from('applications')
+          .update({
+            status: 'failed',
+            test_enabled: false,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', applicationId);
+      }
 
       setTestCompleted(true);
       setTestResult({
