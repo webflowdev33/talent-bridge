@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -602,21 +601,17 @@ export default function ApplicationManagement() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
+      <AdminLayout>
+        <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </main>
-        <Footer />
-      </div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/30">
-      <Header />
-      
-      <main className="flex-1 container py-6">
+    <AdminLayout>
+      <div className="space-y-6">
         {/* Header & Stats */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
@@ -726,7 +721,7 @@ export default function ApplicationManagement() {
             <CandidateList apps={categorizedApps.rejected} showRoundActions={false} emptyMessage="No rejected candidates" />
           </TabsContent>
         </Tabs>
-      </main>
+      
 
       {/* Candidate Details Sheet */}
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
@@ -1058,7 +1053,7 @@ export default function ApplicationManagement() {
         }}
       />
 
-      <Footer />
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

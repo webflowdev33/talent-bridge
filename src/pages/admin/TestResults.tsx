@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -225,22 +224,18 @@ export default function TestResults() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
+      <AdminLayout>
+        <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </main>
-        <Footer />
-      </div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/30">
-      <Header />
-
-      <main className="flex-1 container py-8">
-        <div className="mb-8">
+    <AdminLayout>
+      <div className="space-y-6">
+        <div>
           <h1 className="text-3xl font-bold tracking-tight">Test Results</h1>
           <p className="text-muted-foreground">View all test attempts and candidate answers</p>
         </div>
@@ -373,7 +368,7 @@ export default function TestResults() {
             )}
           </CardContent>
         </Card>
-      </main>
+      
 
       {/* Details Dialog */}
       <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
@@ -616,7 +611,7 @@ export default function TestResults() {
         </DialogContent>
       </Dialog>
 
-      <Footer />
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
