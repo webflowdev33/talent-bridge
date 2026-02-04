@@ -62,6 +62,7 @@ interface JobTemplate {
   department: string | null;
   description: string | null;
   location: string | null;
+  question_count: number | null;
   is_active: boolean | null;
   created_at: string | null;
 }
@@ -77,6 +78,7 @@ interface TemplateFormData {
   department: string;
   description: string;
   location: string;
+  question_count: number;
   is_active: boolean;
 }
 
@@ -93,6 +95,7 @@ const defaultFormData: TemplateFormData = {
   department: '',
   description: '',
   location: '',
+  question_count: 10,
   is_active: true,
 };
 
@@ -186,6 +189,7 @@ export default function JobTemplates() {
         department: template.department || '',
         description: template.description || '',
         location: template.location || '',
+        question_count: template.question_count ?? 10,
         is_active: template.is_active ?? true,
       });
       const rounds = await fetchTemplateRounds(template.id);
@@ -235,6 +239,7 @@ export default function JobTemplates() {
             department: formData.department || null,
             description: formData.description || null,
             location: formData.location || null,
+            question_count: formData.question_count,
             is_active: formData.is_active,
           })
           .eq('id', selectedTemplate.id);
@@ -252,6 +257,7 @@ export default function JobTemplates() {
             department: formData.department || null,
             description: formData.description || null,
             location: formData.location || null,
+            question_count: formData.question_count,
             is_active: formData.is_active,
           })
           .select('id')
@@ -331,6 +337,7 @@ export default function JobTemplates() {
           department: selectedTemplate.department,
           description: selectedTemplate.description,
           location: selectedTemplate.location,
+          question_count: selectedTemplate.question_count ?? 10,
           is_active: false,
           template_id: selectedTemplate.id,
           campaign_id: selectedCampaignId,
@@ -443,6 +450,22 @@ export default function JobTemplates() {
                         placeholder="e.g., Remote, New York"
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="question_count">Questions per Test</Label>
+                    <Input
+                      id="question_count"
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={formData.question_count}
+                      onChange={(e) => setFormData({ ...formData, question_count: parseInt(e.target.value) || 10 })}
+                      placeholder="Number of questions"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Number of questions to display during aptitude/technical tests
+                    </p>
                   </div>
 
                   <div className="space-y-2">

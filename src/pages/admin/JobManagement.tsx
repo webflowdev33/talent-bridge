@@ -65,6 +65,7 @@ interface JobFormData {
   description: string;
   department: string;
   location: string;
+  question_count: number;
   is_active: boolean;
 }
 
@@ -73,6 +74,7 @@ const defaultFormData: JobFormData = {
   description: '',
   department: '',
   location: '',
+  question_count: 10,
   is_active: false,
 };
 
@@ -127,6 +129,7 @@ export default function JobManagement() {
         description: job.description || '',
         department: job.department || '',
         location: job.location || '',
+        question_count: job.question_count ?? 10,
         is_active: job.is_active ?? true,
       });
 
@@ -173,6 +176,7 @@ export default function JobManagement() {
             description: formData.description,
             department: formData.department,
             location: formData.location,
+            question_count: formData.question_count,
             total_rounds: jobRounds.length || 1,
             is_active: formData.is_active,
           })
@@ -204,6 +208,7 @@ export default function JobManagement() {
             description: formData.description,
             department: formData.department,
             location: formData.location,
+            question_count: formData.question_count,
             total_rounds: jobRounds.length || 1,
             is_active: formData.is_active,
           })
@@ -356,6 +361,22 @@ export default function JobManagement() {
                         placeholder="e.g., Remote, New York"
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="question_count">Questions per Test</Label>
+                    <Input
+                      id="question_count"
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={formData.question_count}
+                      onChange={(e) => setFormData({ ...formData, question_count: parseInt(e.target.value) || 10 })}
+                      placeholder="Number of questions"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Number of questions to display during aptitude/technical tests
+                    </p>
                   </div>
 
                   {/* Interview Rounds Definition */}
