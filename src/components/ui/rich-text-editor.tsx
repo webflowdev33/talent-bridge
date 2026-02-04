@@ -65,6 +65,8 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
         allowBase64: true,
         HTMLAttributes: {
           class: 'rounded-md max-w-full my-4 block',
+          loading: 'lazy',
+          onerror: "this.style.display='none';this.onerror=null;",
         },
       }),
       Placeholder.configure({
@@ -105,7 +107,13 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
 
   const addImage = useCallback(() => {
     if (imageUrl && editor) {
-      editor.chain().focus().setImage({ src: imageUrl }).run();
+      // Validate URL format
+      try {
+        new URL(imageUrl);
+      } catch {
+        return;
+      }
+      editor.chain().focus().setImage({ src: imageUrl, alt: 'Task image' }).run();
       setImageUrl('');
       setImageDialogOpen(false);
     }
@@ -336,9 +344,33 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
                 }}
               />
               <p className="text-xs text-muted-foreground">
-                Paste a direct link to an image (Figma exports, Google Drive, etc.)
+                Paste a <strong>direct image URL</strong> (ending in .png, .jpg, .gif, etc.)
+              </p>
+              <p className="text-xs text-destructive">
+                Note: Figma share links won't work. Export the image first and use a direct link.
               </p>
             </div>
+            {imageUrl && (
+              <div className="space-y-2">
+                <Label>Preview</Label>
+                <div className="border rounded-md p-2 bg-muted/30 min-h-[80px] flex items-center justify-center">
+                  <img 
+                    src={imageUrl} 
+                    alt="Preview" 
+                    className="max-w-full max-h-[200px] rounded"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                    }}
+                    onLoad={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'block';
+                      (e.target as HTMLImageElement).nextElementSibling?.classList.add('hidden');
+                    }}
+                  />
+                  <span className="text-sm text-muted-foreground hidden">Unable to load image - check the URL</span>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setImageDialogOpen(false)}>

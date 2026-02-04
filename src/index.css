@@ -148,6 +148,35 @@
   height: auto !important;
   margin: 1rem 0 !important;
   border-radius: 0.5rem !important;
+  min-height: 100px !important;
+  background: hsl(var(--muted)) !important;
+}
+
+/* Handle broken images in editor */
+.prose img[src=""],
+.prose img:not([src]),
+.tiptap img[src=""],
+.tiptap img:not([src]) {
+  display: none !important;
+}
+
+/* Style for images that fail to load */
+.tiptap img {
+  min-height: 60px;
+  background: hsl(var(--muted));
+  border: 1px dashed hsl(var(--border));
+  position: relative;
+}
+
+.tiptap img::before {
+  content: 'Image loading...';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  inset: 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
 }
 
 .prose a {
