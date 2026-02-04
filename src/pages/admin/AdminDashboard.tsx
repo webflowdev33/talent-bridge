@@ -10,6 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   Briefcase, 
   Users, 
@@ -31,9 +38,17 @@ import {
   AlertCircle,
   FileText,
   Target,
-  ClipboardList
+  ClipboardList,
+  Megaphone,
+  LayoutTemplate
 } from 'lucide-react';
 import { format } from 'date-fns';
+
+interface Campaign {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
 
 interface DashboardStats {
   totalJobs: number;
@@ -83,14 +98,74 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
+  const [campaignStats, setCampaignStats] = useState<Record<string, { applications: number; selected: number; rejected: number }>>({});
+
+  useEffect(() => {
+    fetchCampaigns();
+    fetchDashboardData();
+    fetchUsers();
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [selectedCampaign]);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const fetchCampaigns = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('campaigns')
+        .select('id, name, is_active')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setCampaigns(data || []);
+
+      // Fetch stats per campaign for comparison
+      if (data && data.length > 0) {
+        const campaignIds = data.map(c => c.id);
+        
+        // Get jobs per campaign
+        const { data: jobsData } = await supabase
+          .from('jobs')
+          .select('id, campaign_id')
+          .in('campaign_id', campaignIds);
+
+        // Build campaign -> job IDs map
+        const campaignJobsMap = new Map<string, string[]>();
+        (jobsData || []).forEach(j => {
+          if (j.campaign_id) {
+            const existing = campaignJobsMap.get(j.campaign_id) || [];
+            existing.push(j.id);
+            campaignJobsMap.set(j.campaign_id, existing);
+          }
+        });
+
+        // Get applications for those jobs
+        const allJobIds = (jobsData || []).map(j => j.id);
+        const { data: appsData } = await supabase
+          .from('applications')
+          .select('job_id, status')
+          .in('job_id', allJobIds);
+
+        // Aggregate stats per campaign
+        const statsMap: Record<string, { applications: number; selected: number; rejected: number }> = {};
+        campaignIds.forEach(cId => {
+          const jobsInCampaign = campaignJobsMap.get(cId) || [];
+          const appsInCampaign = (appsData || []).filter(a => jobsInCampaign.includes(a.job_id));
+          statsMap[cId] = {
+            applications: appsInCampaign.length,
+            selected: appsInCampaign.filter(a => a.status === 'selected').length,
+            rejected: appsInCampaign.filter(a => a.status === 'rejected').length,
+          };
+        });
+        setCampaignStats(statsMap);
+      }
+    } catch (error) {
+      console.error('Error fetching campaigns:', error);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -324,14 +399,33 @@ export default function AdminDashboard() {
       <Header />
       
       <main className="flex-1 container py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage jobs, applications, and tests</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+            <p className="text-muted-foreground">Manage jobs, applications, and tests</p>
+          </div>
+          {campaigns.length > 0 && (
+            <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+              <SelectTrigger className="w-[200px]">
+                <Megaphone className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Select campaign" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Campaigns</SelectItem>
+                {campaigns.map(c => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name} {!c.is_active && '(Inactive)'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <Tabs defaultValue="dashboard" className="w-full">
           <TabsList className="sticky top-0 z-10 mb-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border shadow-sm">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
           </TabsList>
 
@@ -438,7 +532,19 @@ export default function AdminDashboard() {
                 <CardTitle className="text-base">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
+                <div className="grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-9">
+                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
+                    <Link to="/admin/campaigns">
+                      <Megaphone className="h-4 w-4" />
+                      <span className="text-xs">Campaigns</span>
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
+                    <Link to="/admin/templates">
+                      <LayoutTemplate className="h-4 w-4" />
+                      <span className="text-xs">Templates</span>
+                    </Link>
+                  </Button>
                   <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
                     <Link to="/admin/jobs">
                       <Briefcase className="h-4 w-4" />
@@ -486,6 +592,81 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
+          {/* Campaigns Tab - Cross Campaign Comparison */}
+          <TabsContent value="campaigns" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold">Campaign Comparison</h2>
+                <p className="text-sm text-muted-foreground">Compare metrics across hiring campaigns</p>
+              </div>
+              <Button asChild>
+                <Link to="/admin/campaigns">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Manage Campaigns
+                </Link>
+              </Button>
+            </div>
+
+            {campaigns.length === 0 ? (
+              <Card>
+                <CardContent className="py-10 text-center">
+                  <Megaphone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground mb-4">No campaigns created yet</p>
+                  <Button asChild>
+                    <Link to="/admin/campaigns">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Your First Campaign
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {campaigns.map(campaign => {
+                  const stats = campaignStats[campaign.id] || { applications: 0, selected: 0, rejected: 0 };
+                  const conversionRate = stats.applications > 0 
+                    ? ((stats.selected / stats.applications) * 100).toFixed(1)
+                    : '0';
+                  
+                  return (
+                    <Card key={campaign.id} className={!campaign.is_active ? 'opacity-60' : ''}>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <Megaphone className="h-4 w-4 text-primary" />
+                            {campaign.name}
+                          </CardTitle>
+                          <Badge variant={campaign.is_active ? 'default' : 'secondary'}>
+                            {campaign.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="p-2 rounded-lg bg-muted/50">
+                            <div className="text-lg font-bold">{stats.applications}</div>
+                            <div className="text-xs text-muted-foreground">Applied</div>
+                          </div>
+                          <div className="p-2 rounded-lg bg-success/10">
+                            <div className="text-lg font-bold text-success">{stats.selected}</div>
+                            <div className="text-xs text-muted-foreground">Selected</div>
+                          </div>
+                          <div className="p-2 rounded-lg bg-destructive/10">
+                            <div className="text-lg font-bold text-destructive">{stats.rejected}</div>
+                            <div className="text-xs text-muted-foreground">Rejected</div>
+                          </div>
+                        </div>
+                        <div className="mt-3 pt-3 border-t flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Conversion Rate</span>
+                          <span className="text-sm font-medium">{conversionRate}%</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
             <Card>

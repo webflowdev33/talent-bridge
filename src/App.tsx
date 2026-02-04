@@ -23,6 +23,8 @@ import ApplicationManagement from "./pages/admin/ApplicationManagement";
 import QuestionManagement from "./pages/admin/QuestionManagement";
 import TestResults from "./pages/admin/TestResults";
 import EvaluationParameters from "./pages/admin/EvaluationParameters";
+import CampaignManagement from "./pages/admin/CampaignManagement";
+import JobTemplates from "./pages/admin/JobTemplates";
 import TaskManagement from "./pages/admin/TaskManagement";
 import NotFound from "./pages/NotFound";
 
@@ -116,6 +118,16 @@ const App = () => (
             <Route path="/admin/tasks" element={
               <ProtectedRoute requiredRole="admin">
                 <TaskManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/campaigns" element={
+              <ProtectedRoute requiredRole="admin">
+                <CampaignManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/templates" element={
+              <ProtectedRoute requiredRole="admin">
+                <JobTemplates />
               </ProtectedRoute>
             } />
 
