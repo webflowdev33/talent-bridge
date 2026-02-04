@@ -45,6 +45,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
+  const [linkText, setLinkText] = useState('');
   const [imageUrl, setImageUrl] = useState('');
 
   const editor = useEditor({
@@ -93,11 +94,22 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
 
   const addLink = useCallback(() => {
     if (linkUrl && editor) {
-      editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
+      // If there's link text provided, insert the text with the link
+      if (linkText.trim()) {
+        editor
+          .chain()
+          .focus()
+          .insertContent(`<a href="${linkUrl}">${linkText}</a>`)
+          .run();
+      } else {
+        // Apply link to selected text
+        editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
+      }
       setLinkUrl('');
+      setLinkText('');
       setLinkDialogOpen(false);
     }
-  }, [editor, linkUrl]);
+  }, [editor, linkUrl, linkText]);
 
   const removeLink = useCallback(() => {
     if (editor) {
@@ -245,7 +257,10 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
         <ToolbarButton
           onClick={() => {
             const previousUrl = editor.getAttributes('link').href;
+            const { from, to } = editor.state.selection;
+            const selectedText = editor.state.doc.textBetween(from, to, '');
             setLinkUrl(previousUrl || '');
+            setLinkText(selectedText || '');
             setLinkDialogOpen(true);
           }}
           isActive={editor.isActive('link')}
@@ -295,6 +310,18 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
             <DialogTitle>Add Link</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="link-text">Link Text</Label>
+              <Input
+                id="link-text"
+                value={linkText}
+                onChange={(e) => setLinkText(e.target.value)}
+                placeholder="Click here to view"
+              />
+              <p className="text-xs text-muted-foreground">
+                Text that will be displayed as the clickable link
+              </p>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="link-url">URL</Label>
               <Input
