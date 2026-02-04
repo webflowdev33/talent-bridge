@@ -110,6 +110,33 @@ export type Database = {
           },
         ]
       }
+      campaigns: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       candidate_evaluations: {
         Row: {
           application_id: string
@@ -308,7 +335,7 @@ export type Database = {
           },
         ]
       }
-      jobs: {
+      job_templates: {
         Row: {
           created_at: string | null
           created_by: string | null
@@ -355,6 +382,75 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      jobs: {
+        Row: {
+          campaign_id: string | null
+          created_at: string | null
+          created_by: string | null
+          department: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          location: string | null
+          question_count: number | null
+          requirements: string | null
+          salary_range: string | null
+          template_id: string | null
+          title: string
+          total_rounds: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          department?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          question_count?: number | null
+          requirements?: string | null
+          salary_range?: string | null
+          template_id?: string | null
+          title: string
+          total_rounds?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          department?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          question_count?: number | null
+          requirements?: string | null
+          salary_range?: string | null
+          template_id?: string | null
+          title?: string
+          total_rounds?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "job_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -477,6 +573,7 @@ export type Database = {
       }
       slots: {
         Row: {
+          campaign_id: string | null
           created_at: string | null
           current_capacity: number | null
           end_time: string
@@ -491,6 +588,7 @@ export type Database = {
           venue: string | null
         }
         Insert: {
+          campaign_id?: string | null
           created_at?: string | null
           current_capacity?: number | null
           end_time: string
@@ -505,6 +603,7 @@ export type Database = {
           venue?: string | null
         }
         Update: {
+          campaign_id?: string | null
           created_at?: string | null
           current_capacity?: number | null
           end_time?: string
@@ -519,6 +618,13 @@ export type Database = {
           venue?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "slots_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "slots_job_id_fkey"
             columns: ["job_id"]
