@@ -26,6 +26,7 @@ import EvaluationParameters from "./pages/admin/EvaluationParameters";
 import CampaignManagement from "./pages/admin/CampaignManagement";
 import JobTemplates from "./pages/admin/JobTemplates";
 import TaskManagement from "./pages/admin/TaskManagement";
+import TaskSubmissions from "./pages/admin/TaskSubmissions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -118,6 +119,11 @@ const App = () => (
             <Route path="/admin/tasks" element={
               <ProtectedRoute requiredRole="admin">
                 <TaskManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/submissions" element={
+              <ProtectedRoute requiredRole="admin">
+                <TaskSubmissions />
               </ProtectedRoute>
             } />
             <Route path="/admin/campaigns" element={
