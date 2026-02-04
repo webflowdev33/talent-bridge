@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -350,22 +349,18 @@ export default function TaskManagement() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
+      <AdminLayout>
+        <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </main>
-        <Footer />
-      </div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/30">
-      <Header />
-      
-      <main className="flex-1 container py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+    <AdminLayout>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Task Management</h1>
             <p className="text-muted-foreground">Create tasks and assign them to candidates</p>
@@ -481,7 +476,7 @@ export default function TaskManagement() {
             )}
           </CardContent>
         </Card>
-      </main>
+      
 
       {/* Create/Edit Task Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -790,7 +785,7 @@ export default function TaskManagement() {
         </DialogContent>
       </Dialog>
 
-      <Footer />
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
