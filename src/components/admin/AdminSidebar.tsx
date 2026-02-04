@@ -15,6 +15,8 @@ import {
 import {
   Briefcase,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
   ClipboardCheck,
   ClipboardList,
   FileCheck,
@@ -25,6 +27,7 @@ import {
   Target,
   Users,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const navigationItems = [
   {
@@ -94,21 +97,34 @@ const assessmentItems = [
 ];
 
 export function AdminSidebar() {
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-2 px-2 py-2">
-          <SidebarTrigger className="h-8 w-8" />
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      <SidebarHeader className="border-b border-sidebar-border bg-sidebar">
+        <div className="flex items-center justify-between px-2 py-3">
           {!isCollapsed && (
-            <span className="font-semibold text-sm">Admin Panel</span>
+            <span className="font-semibold text-sm text-sidebar-foreground">Admin Panel</span>
           )}
+          <button
+            onClick={toggleSidebar}
+            className={cn(
+              "h-7 w-7 flex items-center justify-center rounded-md",
+              "hover:bg-sidebar-accent text-sidebar-foreground transition-colors",
+              isCollapsed && "mx-auto"
+            )}
+          >
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </button>
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="bg-sidebar">
         {/* Main Navigation */}
         <SidebarGroup>
           <SidebarGroupContent>
@@ -119,10 +135,10 @@ export function AdminSidebar() {
                     <NavLink
                       to={item.url}
                       end
-                      className="flex items-center gap-2"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                      className="flex items-center gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                     >
-                      <item.icon className="h-4 w-4" />
+                      <item.icon className="h-4 w-4 shrink-0" />
                       <span>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
@@ -134,7 +150,7 @@ export function AdminSidebar() {
 
         {/* Management */}
         <SidebarGroup>
-          <SidebarGroupLabel>Management</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/70">Management</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {managementItems.map((item) => (
@@ -142,10 +158,10 @@ export function AdminSidebar() {
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
                       to={item.url}
-                      className="flex items-center gap-2"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                      className="flex items-center gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                     >
-                      <item.icon className="h-4 w-4" />
+                      <item.icon className="h-4 w-4 shrink-0" />
                       <span>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
@@ -155,9 +171,9 @@ export function AdminSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Applications */}
+        {/* Candidates */}
         <SidebarGroup>
-          <SidebarGroupLabel>Candidates</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/70">Candidates</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {applicationsItems.map((item) => (
@@ -165,10 +181,10 @@ export function AdminSidebar() {
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
                       to={item.url}
-                      className="flex items-center gap-2"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                      className="flex items-center gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                     >
-                      <item.icon className="h-4 w-4" />
+                      <item.icon className="h-4 w-4 shrink-0" />
                       <span>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
@@ -180,7 +196,7 @@ export function AdminSidebar() {
 
         {/* Assessments */}
         <SidebarGroup>
-          <SidebarGroupLabel>Assessments</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/70">Assessments</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {assessmentItems.map((item) => (
@@ -188,10 +204,10 @@ export function AdminSidebar() {
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
                       to={item.url}
-                      className="flex items-center gap-2"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                      className="flex items-center gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                     >
-                      <item.icon className="h-4 w-4" />
+                      <item.icon className="h-4 w-4 shrink-0" />
                       <span>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
