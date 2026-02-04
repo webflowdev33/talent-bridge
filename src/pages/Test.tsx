@@ -658,6 +658,9 @@ export default function Test() {
   const submitTest = async (autoSubmit = false) => {
     if (!testAttemptId) return;
     
+    // Disable proctoring immediately to prevent false violations during submission
+    setProctorReady(false);
+    
     // Exit fullscreen when submitting
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
