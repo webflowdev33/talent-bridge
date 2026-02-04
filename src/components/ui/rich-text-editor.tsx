@@ -19,10 +19,7 @@ import {
   Undo,
   Redo,
   Minus,
-  Unlink,
-  Copy,
-  ExternalLink,
-  Check
+  Unlink
 } from 'lucide-react';
 import { Button } from './button';
 import { cn } from '@/lib/utils';
@@ -36,7 +33,6 @@ import {
 } from './dialog';
 import { Input } from './input';
 import { Label } from './label';
-import { toast } from 'sonner';
 
 interface RichTextEditorProps {
   value: string;
@@ -49,10 +45,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
-  const [linkText, setLinkText] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [linkCopied, setLinkCopied] = useState(false);
-  const [isValidLink, setIsValidLink] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -98,45 +91,17 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
     }
   }, [value, editor]);
 
-  // Validate link URL
-  useEffect(() => {
-    if (linkUrl) {
-      try {
-        new URL(linkUrl);
-        setIsValidLink(true);
-      } catch {
-        // Also accept relative URLs starting with /
-        setIsValidLink(linkUrl.startsWith('/') || linkUrl.startsWith('#'));
-      }
-    } else {
-      setIsValidLink(false);
-    }
-  }, [linkUrl]);
-
   const addLink = useCallback(() => {
-    if (linkUrl && editor && isValidLink) {
+    if (linkUrl && editor) {
       editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
       setLinkUrl('');
-      setLinkText('');
       setLinkDialogOpen(false);
     }
-  }, [editor, linkUrl, isValidLink]);
+  }, [editor, linkUrl]);
 
   const removeLink = useCallback(() => {
     if (editor) {
       editor.chain().focus().unsetLink().run();
-    }
-  }, [editor]);
-
-  const copyCurrentLink = useCallback(() => {
-    if (editor) {
-      const href = editor.getAttributes('link').href;
-      if (href) {
-        navigator.clipboard.writeText(href);
-        setLinkCopied(true);
-        toast.success('Link copied to clipboard');
-        setTimeout(() => setLinkCopied(false), 2000);
-      }
     }
   }, [editor]);
 
@@ -289,20 +254,12 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
           <LinkIcon className="h-4 w-4" />
         </ToolbarButton>
         {editor.isActive('link') && (
-          <>
-            <ToolbarButton
-              onClick={copyCurrentLink}
-              title="Copy Link"
-            >
-              {linkCopied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
-            </ToolbarButton>
-            <ToolbarButton
-              onClick={removeLink}
-              title="Remove Link"
-            >
-              <Unlink className="h-4 w-4" />
-            </ToolbarButton>
-          </>
+          <ToolbarButton
+            onClick={removeLink}
+            title="Remove Link"
+          >
+            <Unlink className="h-4 w-4" />
+          </ToolbarButton>
         )}
         <ToolbarButton
           onClick={() => setImageDialogOpen(true)}
@@ -352,52 +309,13 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
                   }
                 }}
               />
-              <p className="text-xs text-muted-foreground">
-                Enter a full URL (https://...) or a relative path (/page)
-              </p>
             </div>
-            {linkUrl && (
-              <div className="space-y-2">
-                <Label>Preview</Label>
-                <div className={cn(
-                  "border rounded-md p-3 bg-muted/30 flex items-center gap-2",
-                  isValidLink ? "border-success/50" : "border-destructive/50"
-                )}>
-                  <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <span className={cn(
-                    "text-sm truncate",
-                    isValidLink ? "text-primary underline" : "text-destructive"
-                  )}>
-                    {linkUrl}
-                  </span>
-                  {isValidLink && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="ml-auto h-7 w-7 p-0"
-                      onClick={() => {
-                        navigator.clipboard.writeText(linkUrl);
-                        toast.success('Link copied!');
-                      }}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-                {!isValidLink && (
-                  <p className="text-xs text-destructive">
-                    Please enter a valid URL
-                  </p>
-                )}
-              </div>
-            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLinkDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={addLink} disabled={!linkUrl || !isValidLink}>
+            <Button onClick={addLink} disabled={!linkUrl}>
               Add Link
             </Button>
           </DialogFooter>
