@@ -40,7 +40,8 @@ import {
   Target,
   ClipboardList,
   Megaphone,
-  LayoutTemplate
+  LayoutTemplate,
+  FileCheck
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -567,6 +568,12 @@ export default function AdminDashboard() {
                     <Link to="/admin/tasks">
                       <ClipboardList className="h-4 w-4" />
                       <span className="text-xs">Tasks</span>
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
+                    <Link to="/admin/submissions">
+                      <FileCheck className="h-4 w-4" />
+                      <span className="text-xs">Submissions</span>
                     </Link>
                   </Button>
                   <Button asChild variant="outline" className="h-auto py-3 flex-col gap-1.5">
