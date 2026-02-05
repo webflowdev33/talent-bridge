@@ -106,7 +106,7 @@ interface Application {
     phone: string | null;
     resume_url: string | null;
     avatar_url: string | null;
-    skills: string[] | null;
+    skills?: string[] | null;
   };
   jobs?: {
     title: string;
@@ -235,7 +235,7 @@ export default function ApplicationManagement() {
       const appIds = (appsData || []).map(app => app.id);
       
       const [profilesRes, testAttemptsRes] = await Promise.all([
-        supabase.from('profiles').select('user_id, full_name, email, phone, resume_url, avatar_url, skills').in('user_id', userIds),
+        supabase.from('profiles').select('user_id, full_name, email, phone, resume_url, avatar_url').in('user_id', userIds),
         supabase.from('test_attempts').select('id, application_id, round_number, is_passed, is_submitted, obtained_marks, total_marks, started_at, ended_at').in('application_id', appIds)
       ]);
 
@@ -282,7 +282,7 @@ export default function ApplicationManagement() {
     setActionLoading(app.id);
     try {
       await supabase.from('applications').update({ admin_approved: true }).eq('id', app.id);
-      toast({ title: 'Approved', description: `${app.profiles?.full_name || 'Candidate'} approved` });
+      toast({ title: 'Approved', description: `${getDisplayName(app)} approved` });
       fetchApplications();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -295,7 +295,7 @@ export default function ApplicationManagement() {
     setActionLoading(app.id);
     try {
       await supabase.from('applications').update({ status: 'rejected', admin_approved: false }).eq('id', app.id);
-      toast({ title: 'Rejected', description: `${app.profiles?.full_name || 'Candidate'} rejected` });
+      toast({ title: 'Rejected', description: `${getDisplayName(app)} rejected` });
       fetchApplications();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -421,6 +421,15 @@ export default function ApplicationManagement() {
     return { pending, byRound, selected, rejected };
   }, [filteredApplications, maxRounds]);
 
+  const getDisplayName = (app: Application) =>
+    app.profiles?.full_name?.trim() || app.profiles?.email?.trim() || 'Unknown user';
+
+  const getInitials = (app: Application) => {
+    const name = getDisplayName(app);
+    if (name === 'Unknown user') return 'U';
+    return name.split(' ').map(n => n[0]).filter(Boolean).join('').toUpperCase().slice(0, 2) || 'U';
+  };
+
   const getStatusBadge = (app: Application) => {
     if (app.status === 'rejected') return <Badge variant="destructive" className="text-xs">Rejected</Badge>;
     if (app.status === 'selected') return <Badge className="bg-success text-success-foreground text-xs">Selected</Badge>;
@@ -442,12 +451,12 @@ export default function ApplicationManagement() {
           <Avatar className="h-9 w-9 shrink-0">
             <AvatarImage src={avatarUrls.get(app.user_id)} />
             <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
-              {app.profiles?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
+              {getInitials(app)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="font-medium text-sm">{app.profiles?.full_name || 'Unknown'}</p>
-            <p className="text-xs text-muted-foreground truncate">{app.profiles?.email}</p>
+            <p className="font-medium text-sm">{getDisplayName(app)}</p>
+            <p className="text-xs text-muted-foreground truncate">{app.profiles?.email ?? '—'}</p>
           </div>
         </div>
       </td>
@@ -751,15 +760,14 @@ export default function ApplicationManagement() {
                   <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Contact</h4>
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2 text-sm">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{selectedApp.profiles?.email || 'No email'}</span>
+                      <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span>{selectedApp.profiles?.email ?? '—'}</span>
                     </div>
-                    {selectedApp.profiles?.phone && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{selectedApp.profiles.phone}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span>{selectedApp.profiles?.phone ?? '—'}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1025,7 +1033,7 @@ export default function ApplicationManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Application?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove {appToDelete?.profiles?.full_name || 'this candidate'}'s application and all test data. They will be able to apply again.
+              This will permanently remove {appToDelete ? getDisplayName(appToDelete) : 'this candidate'}'s application and all test data. They will be able to apply again.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

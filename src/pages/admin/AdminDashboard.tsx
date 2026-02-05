@@ -656,7 +656,7 @@ export default function AdminDashboard() {
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <p className="font-medium text-sm">{user.full_name || 'Unknown'}</p>
+                                  <p className="font-medium text-sm">{user.full_name?.trim() || user.email?.trim() || 'Unknown user'}</p>
                                 </div>
                               </div>
                             </TableCell>
