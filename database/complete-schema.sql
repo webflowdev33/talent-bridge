@@ -722,6 +722,13 @@ CREATE POLICY "Admins can view all resumes" ON storage.objects
 -- STEP 8: INDEXES FOR PERFORMANCE
 -- =====================================================
 
+-- Add campaign_id to slots if it doesn't exist (for existing databases)
+DO $$ BEGIN
+    ALTER TABLE public.slots ADD COLUMN campaign_id uuid REFERENCES public.campaigns(id) ON DELETE SET NULL;
+EXCEPTION
+    WHEN duplicate_column THEN null;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_applications_user_id ON public.applications(user_id);
 CREATE INDEX IF NOT EXISTS idx_applications_job_id ON public.applications(job_id);
 CREATE INDEX IF NOT EXISTS idx_applications_status ON public.applications(status);
