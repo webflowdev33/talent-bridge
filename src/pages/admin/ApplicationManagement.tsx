@@ -742,11 +742,11 @@ export default function ApplicationManagement() {
                   <Avatar className="h-14 w-14">
                     <AvatarImage src={avatarUrls.get(selectedApp.user_id)} />
                     <AvatarFallback className="text-lg">
-                      {selectedApp.profiles?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
+                      {getInitials(selectedApp)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <SheetTitle className="text-left">{selectedApp.profiles?.full_name || 'Unknown'}</SheetTitle>
+                    <SheetTitle className="text-left">{getDisplayName(selectedApp)}</SheetTitle>
                     <SheetDescription className="text-left">
                       {selectedApp.jobs?.title} • Round {selectedApp.current_round || 1}/{selectedApp.jobs?.total_rounds || 1}
                     </SheetDescription>
@@ -769,7 +769,6 @@ export default function ApplicationManagement() {
                     </div>
                   </div>
                 </div>
-              </div>
 
               <Separator />
 
