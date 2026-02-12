@@ -24,6 +24,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -142,6 +144,23 @@ export default function ApplicationManagement() {
   const [avatarUrls, setAvatarUrls] = useState<Map<string, string>>(new Map());
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [evaluationsLoading, setEvaluationsLoading] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportFilteredOnly, setExportFilteredOnly] = useState(true);
+  const [exportFields, setExportFields] = useState<Record<string, boolean>>({
+    full_name: true,
+    email: true,
+    phone: true,
+    job_title: true,
+    status: true,
+    admin_approved: false,
+    current_round: true,
+    created_at: true,
+    updated_at: false,
+    resume_url: false,
+    slot_date: false,
+    slot_time: false,
+    skills: false,
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -440,6 +459,98 @@ export default function ApplicationManagement() {
     return <Badge variant="outline" className="text-xs">Approved</Badge>;
   };
 
+  // Export helpers
+  const fieldOptions: { key: string; label: string }[] = [
+    { key: 'full_name', label: 'Full name' },
+    { key: 'email', label: 'Email' },
+    { key: 'phone', label: 'Phone' },
+    { key: 'job_title', label: 'Job Title' },
+    { key: 'status', label: 'Status' },
+    { key: 'admin_approved', label: 'Admin Approved' },
+    { key: 'current_round', label: 'Current Round' },
+    { key: 'created_at', label: 'Applied At' },
+    { key: 'updated_at', label: 'Updated At' },
+    { key: 'resume_url', label: 'Resume URL' },
+    { key: 'slot_date', label: 'Slot Date' },
+    { key: 'slot_time', label: 'Slot Time' },
+    { key: 'skills', label: 'Skills' },
+  ];
+
+  const getFieldValue = (app: Application, key: string) => {
+    switch (key) {
+      case 'full_name':
+        return app.profiles?.full_name ?? '';
+      case 'email':
+        return app.profiles?.email ?? '';
+      case 'phone':
+        return app.profiles?.phone ?? '';
+      case 'job_title':
+        return app.jobs?.title ?? '';
+      case 'status':
+        return app.status ?? '';
+      case 'admin_approved':
+        return app.admin_approved ? 'Yes' : 'No';
+      case 'current_round':
+        return String(app.current_round ?? '');
+      case 'created_at':
+        return app.created_at ? format(new Date(app.created_at), 'yyyy-MM-dd HH:mm') : '';
+      case 'updated_at':
+        // @ts-ignore
+        return (app as any).updated_at ? format(new Date((app as any).updated_at), 'yyyy-MM-dd HH:mm') : '';
+      case 'resume_url':
+        return app.profiles?.resume_url ?? '';
+      case 'slot_date':
+        return app.slots?.slot_date ?? '';
+      case 'slot_time':
+        return app.slots?.start_time ?? '';
+      case 'skills':
+        // @ts-ignore
+        return Array.isArray(app.profiles?.skills) ? (app.profiles!.skills!.join(', ')) : '';
+      default:
+        return '';
+    }
+  };
+
+  const escapeCsv = (val: string) => {
+    if (val == null) return '';
+    const s = String(val);
+    if (s.includes('"')) return `"${s.replace(/"/g, '""')}"`;
+    if (s.includes(',') || s.includes('\n')) return `"${s}"`;
+    return s;
+  };
+
+  const handleExportDownload = () => {
+    const selectedKeys = Object.keys(exportFields).filter(k => exportFields[k]);
+    if (selectedKeys.length === 0) {
+      toast({ title: 'No fields selected', description: 'Please select at least one field to export', variant: 'destructive' });
+      return;
+    }
+    const rows = exportFilteredOnly ? filteredApplications : applications;
+    const header = selectedKeys.map(k => {
+      const opt = fieldOptions.find(o => o.key === k);
+      return opt ? opt.label : k;
+    });
+
+    const lines = [header.map(escapeCsv).join(',')];
+    rows.forEach(app => {
+      const values = selectedKeys.map(k => escapeCsv(getFieldValue(app, k)));
+      lines.push(values.join(','));
+    });
+
+    const csvContent = lines.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `applications_export_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setExportOpen(false);
+    toast({ title: 'Export started', description: 'CSV file is downloading' });
+  };
+
   const CandidateRow = ({ app, showRoundActions = true }: { app: Application; showRoundActions?: boolean }) => (
     <tr 
       className="border-b last:border-b-0 hover:bg-muted/50 transition-colors cursor-pointer"
@@ -640,6 +751,10 @@ export default function ApplicationManagement() {
               <XCircle className="h-3.5 w-3.5 text-destructive" />
               <span className="text-xs font-medium">{categorizedApps.rejected.length} Rejected</span>
             </div>
+            <Button variant="outline" size="sm" onClick={() => setExportOpen(true)} className="ml-2">
+              <ArrowUpRight className="h-4 w-4 mr-2" />
+              Export
+            </Button>
           </div>
         </div>
 
@@ -731,6 +846,58 @@ export default function ApplicationManagement() {
           </TabsContent>
         </Tabs>
       
+
+      {/* Export Sheet */}
+      <Sheet open={exportOpen} onOpenChange={setExportOpen}>
+        <SheetContent className="sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <div className="flex items-center justify-between">
+              <SheetTitle>Export Applications</SheetTitle>
+            </div>
+            <SheetDescription>
+              Choose the fields you want to include in the CSV export. You can export the current filtered results or all applications.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Switch checked={exportFilteredOnly} onCheckedChange={setExportFilteredOnly} />
+                <span className="text-sm">Export only visible (filtered) applications</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="ghost" onClick={() => {
+                  const allTrue: Record<string, boolean> = {};
+                  fieldOptions.forEach(o => allTrue[o.key] = true);
+                  setExportFields(allTrue);
+                }}>Select all</Button>
+                <Button size="sm" variant="ghost" onClick={() => {
+                  const none: Record<string, boolean> = {};
+                  fieldOptions.forEach(o => none[o.key] = false);
+                  setExportFields(none);
+                }}>Clear</Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {fieldOptions.map(opt => (
+                <div key={opt.key} className="flex items-center gap-2">
+                  <Checkbox
+                    checked={!!exportFields[opt.key]}
+                    onCheckedChange={(v) => setExportFields(prev => ({ ...prev, [opt.key]: !!v }))}
+                  />
+                  <Label className="text-sm">{opt.label}</Label>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setExportOpen(false)}>Cancel</Button>
+              <Button onClick={handleExportDownload}>Download CSV</Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Candidate Details Sheet */}
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
